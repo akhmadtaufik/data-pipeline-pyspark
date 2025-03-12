@@ -1,0 +1,17 @@
+# Aturan untuk funding_rounds
+funding_rounds:
+  completeness:
+    - column: raised_amount_usd
+      max_null_percentage: 5
+  consistency:
+    - column: funding_round_type
+      allowed_values: ["Seed", "Series A", "Series B", "IPO"]
+
+# Aturan untuk API Milestones
+milestones:
+  completeness:
+    - column: object_id
+      max_null_percentage: 1
+  consistency:
+    - column: milestone_code
+      allowed_values: ["PRODUCT_LAUNCH", "FUNDING", "ACQUISITION"]
