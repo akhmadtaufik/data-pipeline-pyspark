@@ -8,10 +8,6 @@ from pyspark.sql import DataFrame
 
 @retry(stop=stop_after_attempt(3))
 def extract_api(start_date: str, end_date: str) -> DataFrame:
-    """
-    Extracts milestone data from API and returns it as a Spark DataFrame.
-    Uses a dynamic schema to capture all fields returned by the API.
-    """
     spark = init_spark_session()
 
     try:
@@ -60,5 +56,4 @@ def extract_api(start_date: str, end_date: str) -> DataFrame:
         return spark.createDataFrame([], ["milestone_id", "object_id"])
 
 def isEmpty(df):
-    """Helper method to check if DataFrame is empty"""
     return df.count() == 0
