@@ -1,7 +1,6 @@
 import os
 import findspark
 from pyspark.sql import SparkSession
-import pyspark.sql
 
 HADOOP_HOME = "C:\\hadoop"
 
@@ -23,12 +22,12 @@ def init_spark_session() -> SparkSession:
         SparkSession: A configured SparkSession instance.
     """
     spark = (
-        SparkSession.builder.appName("Data Pipeline")
+        SparkSession.builder.appName("Data Pipeline")  # type: ignore
         .config("spark.hadoop.home.dir", HADOOP_HOME)
         .config("spark.sql.debug.maxToStringFields", 100)
         .getOrCreate()
     )
 
-    spark.sparkContext.setLogLevel("ERROR")
+    spark.sparkContext.setLogLevel("ERROR")  # type: ignore
 
     return spark
