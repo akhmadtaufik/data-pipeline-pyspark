@@ -2,23 +2,23 @@ import os
 from typing import Any, List
 from pyspark.sql import DataFrame
 from src.utils.spark_session import init_spark_session
+from src.utils.config import (
+    POSTGRES_HOST,
+    POSTGRES_PORT,
+    POSTGRES_USER,
+    POSTGRES_PASSWORD,
+)
 
 
 def extract_table_name(db_name: str) -> List[Any] | None:
     spark = init_spark_session()
 
-    # set variable for database
-    HOST = os.getenv("POSTGRES_HOST")
-    PORT = os.getenv("POSTGRES_PORT")
-    USER = os.getenv("POSTGRES_USER")
-    PASSWORD = os.getenv("POSTGRES_PASSWORD")
-
-    DB_URL = f"jdbc:postgresql://{HOST}:{PORT}/{db_name}"
+    DB_URL = f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db_name}"
     # set config
     jdbc_url = DB_URL
     connection_properties = {
-        "user": USER,
-        "password": PASSWORD,
+        "user": POSTGRES_USER,
+        "password": POSTGRES_PASSWORD,
         "driver": "org.postgresql.Driver",
     }
 
