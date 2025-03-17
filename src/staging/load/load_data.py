@@ -1,5 +1,12 @@
 import os
 from pyspark.sql import DataFrame
+from src.utils.config import (
+    POSTGRES_HOST,
+    POSTGRES_PORT,
+    POSTGRES_USER,
+    POSTGRES_PASSWORD,
+    DB_STAGING,
+)
 
 
 def load_data_to_staging(df: DataFrame, target_table: str):
@@ -19,19 +26,13 @@ def load_data_to_staging(df: DataFrame, target_table: str):
         Exception: If there is an error during the database connection or data
         loading process, an error message is printed.
     """
-    # set variable for database
-    HOST = os.getenv("POSTGRES_HOST")
-    PORT = os.getenv("POSTGRES_PORT")
-    DB_NAME = os.getenv("DB_STAGING")
-    USER = os.getenv("POSTGRES_USER")
-    PASSWORD = os.getenv("POSTGRES_PASSWORD")
 
-    DB_URL = f"jdbc:postgresql://{HOST}:{PORT}/{DB_NAME}"
+    DB_URL = f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_STAGING}"
 
     # set config
     connection_properties = {
-        "user": USER,
-        "password": PASSWORD,
+        "user": POSTGRES_USER,
+        "password": POSTGRES_PASSWORD,
         "driver": "org.postgresql.Driver",
     }
     try:
