@@ -6,6 +6,12 @@ from minio import Minio
 from io import BytesIO
 from typing import Any, Optional
 from src.utils.log import ETLLogger
+from src.utils.config import (
+    MINIO_ENDPOINT,
+    MINIO_PROFILING_BUCKET_NAME,
+    MINIO_ACCESS_KEY,
+    MINIO_SECRET_KEY,
+)
 
 
 class DataProfiler:
@@ -23,10 +29,10 @@ class DataProfiler:
         }
 
         # MinIO Configuration
-        self.MINIO_ENDPOINT = "localhost:9000"
-        self.ACCESS_KEY = "minioadmin"
-        self.SECRET_KEY = "minioadmin"
-        self.BUCKET = "profiling-reports"
+        self.MINIO_ENDPOINT = MINIO_ENDPOINT
+        self.ACCESS_KEY = MINIO_ACCESS_KEY
+        self.SECRET_KEY = MINIO_SECRET_KEY
+        self.BUCKET = MINIO_PROFILING_BUCKET_NAME
 
     def _load_profile_config(self) -> dict[str, Any]:
         config = {
@@ -197,18 +203,18 @@ class DataProfiler:
     def _save_to_minio(self) -> str:
         """Save report to MinIO"""
         client = Minio(
-            self.MINIO_ENDPOINT,
+            str(self.MINIO_ENDPOINT),
             access_key=self.ACCESS_KEY,
             secret_key=self.SECRET_KEY,
             secure=False,
         )
 
-        if not client.bucket_exists(self.BUCKET):
-            client.make_bucket(self.BUCKET)
+        if not client.bucket_exists(str(self.BUCKET)):
+            client.make_bucket(str(self.BUCKET))
 
         report_bytes = json.dumps(self.report).encode("utf-8")
         client.put_object(
-            self.BUCKET,
+            str(self.BUCKET),
             f"{self.table_name}-{datetime.now().strftime('%Y%m%d')}.json",
             BytesIO(report_bytes),
             len(report_bytes),
