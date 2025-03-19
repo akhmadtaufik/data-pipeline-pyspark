@@ -1,98 +1,185 @@
-import os
 import logging
-from dotenv import load_dotenv
+from typing import List, Any
+from pyspark.sql import DataFrame
+from src.utils.log_message import log_operation
+from src.utils.config import DB_STAGING
 from src.staging.extract.extract_csv import extract_csv
 from src.staging.extract.extract_api import extract_api
-from src.staging.extract.extract_database import extract_databse, extract_table_name
-from src.staging.load.load_data import load_data_to_staging
-
-load_dotenv()
-
-# Konfigurasi Logging
-logging.basicConfig(
-    filename="logs/pipeline.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
+from src.staging.extract.extract_database import (
+    extract_table_name,
+    extract_databse,
 )
+from src.staging.load.load_data import load_data_to_staging
 
 
 def run_pipeline():
+    """
+    Runs the ETL pipeline to extract data from CSV files, a database, and an API,
+    and then loads the data into a staging area.
+
+    The function performs the following steps:
+    1. Extracts data from specified CSV files and logs the operation status.
+    2. Extracts table names from a PostgreSQL database and retrieves data from each table,
+       logging the operation status.
+    3. Extracts data from an API within a specified date range and logs the operation status.
+    4. Loads the extracted data from CSV files, database tables, and API into a staging area,
+       logging the operation status.
+
+    Logs are generated for each step to track the success or failure of the operations.
+    In case of errors, the function logs the error details and raises exceptions.
+    """
     try:
         # --------------- Extract From Source---------------#
         # 1. Extract CSV
-        logging.info("1. Memulai Extract CSV people...")
-        people_df = extract_csv("data/raw/people.csv")
-        logging.info("2. Memulai Extract CSV relationships...")
-        relations_df = extract_csv("data/raw/relationships.csv")
+        csv_tables = {
+            "people": "data/raw/people.csv",
+            "relationships": "data/raw/relationships.csv",
+        }
+
+        for table, path in csv_tables.items():
+            try:
+                df: DataFrame = extract_csv(path)
+                log_operation(
+                    "extract",
+                    "success",
+                    "csv",
+                    table,
+                    message="Data CSV berhasil diekstrak",
+                )
+
+            except Exception as e:
+                log_operation(
+                    "extract", "failed", "csv", table, error_msg=str(e)
+                )
 
         # 2. Extract Database
-        db_name = os.getenv("DB_SOURCE")
-        logging.info(f"3. Memulai Extract Database {db_name}...")
-        logging.info(f"4. Memulai Extract Nama Tabel from {db_name}...")
-        table_names = extract_table_name(db_name)  # type: ignore
-        dataframes = {}
+        db_name = str(DB_STAGING)
+        try:
+            tables: List[Any] = extract_table_name(db_name)  # type: ignore
+            log_operation(
+                "extract",
+                "info",
+                "database",
+                "system",
+                message=f"Found {len(tables)} tables in database",  # type: ignore
+            )
 
-        if table_names:
-            for table in table_names:
-                df = extract_databse(db_name, table)  # type: ignore
-                if df is not None:
-                    dataframes[table] = df
-                    logging.info(f"Berhasil mengekstrak tabel: {table}")
-                else:
-                    logging.error(f"Gagal mengekstrak tabel: {table}")
+            for table in tables:  # type: ignore
+                try:
+                    df: DataFrame = extract_databse(db_name, table)  # type: ignore
+                    log_operation(
+                        "extract",
+                        "success",
+                        "database",
+                        table,
+                        "Table berhasil diekstrak",
+                    )
 
-        else:
-            logging.error("Tidak ada tabel yang ditemukan dalam database.")
+                except Exception as e:
+                    log_operation(
+                        "extract",
+                        "failed",
+                        "database",
+                        table,
+                        error_msg=str(e),
+                    )
+                    continue
+
+        except Exception as e:
+            log_operation(
+                "extract", "failed", "database", "system", error_msg=str(e)
+            )
+            raise
 
         # 3. Extract API
-        logging.info("5. Memulai Extract API milestones...")
         start_date = "2000-01-01"
         end_date = "2010-12-31"
 
         try:
-            milestones_df = extract_api(start_date, end_date)
+            milestones_df: DataFrame = extract_api(start_date, end_date)
 
-            # Check if DataFrame is empty before attempting to show it
-            if milestones_df is not None:
-                try:
-                    if milestones_df.count() > 0:
-                        # Show sample data and schema
-                        logging.info("Schema API milestones:")
-                        milestones_df.printSchema()
+            if milestones_df.isEmpty():
+                log_operation(
+                    "extract",
+                    "failed",
+                    "api",
+                    "milestones",
+                    message="Tidak ada data dari API",
+                )
 
-                except Exception as e:
-                    logging.error(f"Error saat memproses DataFrame: {str(e)}")
             else:
-                logging.warning("Extract API mengembalikan None.")
+                log_operation(
+                    "extract",
+                    "success",
+                    "api",
+                    "milestones",
+                    message=f"Data API berhasil ({milestones_df.count()} records)",
+                )
+
         except Exception as e:
-            logging.error(f"Error saat mengekstrak data API: {str(e)}")
+            log_operation(
+                "extract", "failed", "api", "milestones", error_msg=str(e)
+            )
+            raise
 
         # --------------- Load To Staging ---------------#
+        log_operation(
+            "load",
+            "started",
+            "system",
+            "system",
+            message="Memulai proses loading",
+        )
         # 1. Load CSV ke Staging
-        logging.info("6. Memulai Load CSV people ke staging...")
-        load_data_to_staging(people_df, "people")
-        logging.info("7. Memulai Load CSV relationships ke staging...")
-        load_data_to_staging(relations_df, "relationships")
+        for table in csv_tables.keys():
+            try:
+                load_data_to_staging(locals()[f"{table}_df"], table, "csv")
+
+                log_operation("load", "success", "csv", table)
+
+            except Exception as e:
+                log_operation("load", "failed", "csv", table, error_msg=str(e))
+                raise
 
         # 2. Load Database ke Staging
-        for table, df in dataframes.items():
-            load_data_to_staging(df, table) # type: ignore
-            logging.info(f"Berhasil load tabel {table} ke staging")
+        for table in tables:  # type: ignore
+            try:
+                if f"df_{table}" in locals():
+                    load_data_to_staging(
+                        locals()[f"df_{table}"], table, "database"
+                    )
+                    log_operation("load", "success", "database", table)
 
-        # # 3. Load API ke Staging
-        logging.info("8. Memulai Load API milestones ke staging...")
-        if milestones_df is not None:
-            load_data_to_staging(milestones_df, "milestones")
-            logging.info("Berhasil load API milestones ke staging")
-        else:
-            logging.error(
-                "Milestones DataFrame kosong. Tidak dapat melakukan load ke staging."
+            except Exception as e:
+                log_operation(
+                    "load", "failed", "database", table, error_msg=str(e)
+                )
+                continue
+
+        # 3. Load API ke Staging
+        try:
+            if not milestones_df.isEmpty():
+                load_data_to_staging(milestones_df, "milestones", "api")
+                log_operation("load", "success", "api", "milestones")
+
+        except Exception as e:
+            log_operation(
+                "load", "failed", "api", "milestones", error_msg=str(e)
             )
+            raise
 
-        logging.info("✅ Pipeline selesai!")
+        log_operation(
+            "complete",
+            "success",
+            "system",
+            "system",
+            message="Pipeline selesai",
+        )
 
     except Exception as e:
-        logging.error(f"❌ Error: {str(e)}", exc_info=True)
+        log_operation("system", "failed", "system", "system", error_msg=str(e))
+        logging.error(f"❌ FATAL ERROR: {str(e)}", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":
