@@ -4,8 +4,8 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, count, when, isnull, to_date, min, max
 from minio import Minio
 from io import BytesIO
-from typing import Any, Optional
-from src.utils.log import ETLLogger
+from typing import Any
+from src.utils.log_message import log_operation
 from src.utils.config import (
     MINIO_ENDPOINT,
     MINIO_PROFILING_BUCKET_NAME,
@@ -15,11 +15,37 @@ from src.utils.config import (
 
 
 class DataProfiler:
+    """
+    A class for profiling data from various sources and saving the results to MinIO.
+
+    Attributes:
+        data (DataFrame): The data to be profiled.
+        table_name (str): The name of the table or dataset.
+        source_type (str): The type of data source (e.g., database, CSV, API).
+        profile_config (dict): Configuration for profiling based on table name.
+        report (dict): A dictionary to store profiling results.
+        MINIO_ENDPOINT (str): MinIO server endpoint.
+        ACCESS_KEY (str): Access key for MinIO.
+        SECRET_KEY (str): Secret key for MinIO.
+        BUCKET (str): MinIO bucket name for storing profiling reports.
+
+    Methods:
+        _load_profile_config(): Loads profiling configuration for the specified table.
+        _log_start(): Logs the start of the profiling process.
+        _log_success(): Logs the successful completion of the profiling process.
+        _log_error(error_msg): Logs an error during the profiling process.
+        _profile_column(col_name, col_type): Profiles a single column based on its type.
+        _get_missing_pct(col_name): Calculates the percentage of missing values in a column.
+        _get_valid_date_pct(col_name): Calculates the percentage of valid date entries in a column.
+        generate_profile(): Generates a profile report for the data and saves it to MinIO.
+        _determine_column_type(col_name): Determines the type of a column based on the configuration.
+        _save_to_minio(): Saves the profiling report to MinIO.
+    """
+
     def __init__(self, data: DataFrame, table_name: str, source_type: str):
         self.data = data
         self.table_name = table_name
         self.source_type = source_type
-        self.logger = ETLLogger()
         self.profile_config: dict[str, Any] = self._load_profile_config()
         self.report: dict[str, Any] = {
             "table_name": table_name,
@@ -110,29 +136,32 @@ class DataProfiler:
         return config.get(self.table_name, {})
 
     def _log_start(self):
-        self.logger.info(
-            {
-                "step": "profiling",
-                "process": "data_quality_check",
-                "status": "started",
-                "source": self.source_type,
-                "table_name": self.table_name,
-                "etl_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            }
+        log_operation(
+            step="profiling",
+            status="started",
+            source=self.source_type,
+            table_name=self.table_name,
+            message=f"Memulai profiling {self.table_name}",
         )
 
-    def _log_completion(self, status: str, error_msg: Optional[str] = None):
-        log_msg = {
-            "step": "profiling",
-            "process": "data_quality_check",
-            "status": status,
-            "source": self.source_type,
-            "table_name": self.table_name,
-            "etl_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        if error_msg:
-            log_msg["error_msg"] = error_msg
-        self.logger.log(log_msg)
+    def _log_success(self):
+        log_operation(
+            step="profiling",
+            status="success",
+            source=self.source_type,
+            table_name=self.table_name,
+            message=f"Berhasil membuat profil {self.table_name}",
+        )
+
+    def _log_error(self, error_msg: str):
+        log_operation(
+            step="profiling",
+            status="failed",
+            source=self.source_type,
+            table_name=self.table_name,
+            error_msg=error_msg,
+            message=f"Gagal profiling {self.table_name}",
+        )
 
     def _profile_column(self, col_name: str, col_type: str) -> dict[str, Any]:
         profile = {}
@@ -182,12 +211,11 @@ class DataProfiler:
                 )
 
             self._save_to_minio()
-            self._log_completion("success")
+            self._log_success()
             return self.report
 
         except Exception as e:
-            error_msg = f"Error profiling {self.table_name}: {str(e)}"
-            self._log_completion("failed", error_msg)
+            self._log_error(str(e))
             raise
 
     def _determine_column_type(self, col_name: str) -> str:
