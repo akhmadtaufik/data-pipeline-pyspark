@@ -2,7 +2,7 @@ from datetime import datetime
 from pyspark.sql import DataFrame
 from minio import Minio
 from io import BytesIO
-from src.utils.log import ETLLogger
+from src.utils.log_message import log_operation
 from src.utils.config import (
     MINIO_ENDPOINT,
     MINIO_ACCESS_KEY,
@@ -10,27 +10,23 @@ from src.utils.config import (
     MINIO_BUCKET_NAME,
 )
 
-logger = ETLLogger()
 
-
-def handle_error(df: DataFrame, target_table: str, error: Exception) -> None:
+def handle_error(
+    df: DataFrame, target_table: str, error: Exception, source: str
+) -> None:
     """
-    Handles errors during the ETL process by backing up the DataFrame to MinIO
-    and logging the error details.
-
-    This function attempts to upload the provided DataFrame as a CSV file to a
-    specified MinIO bucket. If the bucket does not exist, it is created. The
-    function logs the error details using the ETLLogger. If an error occurs
-    during the backup process, it logs the failure and raises the exception.
+    Handles errors by backing up the provided DataFrame to a MinIO bucket and logging the operation.
 
     Args:
         df (DataFrame): The DataFrame to be backed up.
         target_table (str): The name of the target table associated with the DataFrame.
         error (Exception): The exception that triggered the error handling.
+        source (str): The source of the data being processed.
 
     Raises:
-        Exception: If an error occurs during the backup process.
+        Exception: Re-raises any exception encountered during the backup process.
     """
+
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
@@ -60,28 +56,20 @@ def handle_error(df: DataFrame, target_table: str, error: Exception) -> None:
             content_type="text/csv",
         )
 
-        # Log error
-        logger.log(
-            {
-                "step": "load",
-                "process": "staging",
-                "status": "failed",
-                "source": "pipeline",
-                "table_name": target_table,
-                "etl_date": current_date,
-            }
+        log_operation(
+            step="backup",
+            status="success",
+            source=source,
+            table_name=target_table,
+            message=f"Backup berhasil: {file_name}",
         )
 
     except Exception as e:
-        logger.log(
-            {
-                "step": "load",
-                "process": "staging",
-                "status": "failed",
-                "source": "pipeline",
-                "table_name": target_table,
-                "etl_date": current_date,
-                "error_msg": f"Gagal backup data: {str(e)}",
-            }
+        log_operation(
+            step="backup",
+            status="failed",
+            source=source,
+            table_name=target_table,
+            error_msg=f"Gagal backup: {str(e)}",
         )
         raise
