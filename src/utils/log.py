@@ -14,6 +14,8 @@ from src.utils.config import (
 class ETLLogger:
     def __init__(self):
         self.engine = self._create_engine()
+        self.schema = "startup"
+        self.table_name = "startup_etl_log"
 
     def _create_engine(self):
         engine = create_engine(
@@ -27,8 +29,9 @@ class ETLLogger:
         try:
             df_log = pd.DataFrame([log_msg])
             df_log.to_sql(
-                name="startup_etl_log",
+                name=self.table_name,
                 con=self.engine,
+                schema=self.schema,
                 if_exists="append",
                 index=False,
             )
@@ -44,7 +47,7 @@ class ETLLogger:
     ) -> Optional[datetime]:
         query = f"""
         SELECT MAX(etl_date)
-        FROM startup_etl_log
+        FROM {self.schema}.{self.table_name}
         WHERE process = '{process_name}'
           AND table_name = '{table_name}'
           AND status = 'success'
