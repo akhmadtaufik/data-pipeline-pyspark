@@ -4,9 +4,9 @@ from src.utils.log import ETLLogger
 
 logger = ETLLogger()
 
-
 def log_operation(
     step: str,
+    process: str,
     status: str,
     source: str,
     table_name: str,
@@ -14,23 +14,28 @@ def log_operation(
     message: str = None,  # type: ignore
 ) -> None:
     """
-    Logs the operation details of an ETL step to the ETLLogger and outputs
-    a formatted log message.
+    Logs an operation's details to both the ETL log database and the standard logging system.
 
-    Args:
-        step (str): The current step in the ETL process.
-        status (str): The status of the operation (e.g., 'started', 'success', 'failed').
-        source (str): The source of the data being processed.
-        table_name (str): The name of the table involved in the operation.
-        error_msg (str, optional): An error message if the operation failed.
-        message (str, optional): Additional message to include in the log.
+    This function creates a log entry with details about a specific ETL operation step, including
+    the step name, process name, status, source, and table name. It logs this entry to the ETL log
+    database using the ETLLogger class and also logs a formatted message to the standard logging
+    system.
+
+    Parameters:
+    - step (str): The name of the ETL step being logged.
+    - process (str): The name of the ETL process.
+    - status (str): The status of the operation (e.g., 'success', 'failure').
+    - source (str): The source of the data being processed.
+    - table_name (str): The name of the table involved in the operation.
+    - error_msg (str, optional): An optional error message if the operation failed.
+    - message (str, optional): An optional additional message to include in the log.
 
     Returns:
-        None
+    - None
     """
     log_entry = {
         "step": step,
-        "process": "staging",
+        "process": process,
         "status": status,
         "source": source,
         "table_name": table_name,
