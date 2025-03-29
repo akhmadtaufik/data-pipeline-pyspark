@@ -36,6 +36,7 @@ def extract_api(start_date: str, end_date: str) -> DataFrame:
         if not raw_data:
             log_operation(
                 step="extract",
+                process="profiling",
                 status="skipped",
                 source="api",
                 table_name="milestones",
@@ -59,6 +60,7 @@ def extract_api(start_date: str, end_date: str) -> DataFrame:
         if not cleaned_data:
             log_operation(
                 step="extract",
+                process="profiling",
                 status="skipped",
                 source="api",
                 table_name="milestones",
@@ -72,6 +74,7 @@ def extract_api(start_date: str, end_date: str) -> DataFrame:
         # Log the schema that was inferred
         log_operation(
             step="extract",
+            process="profiling",
             status="success",
             source="api",
             table_name="milestones",
@@ -83,6 +86,7 @@ def extract_api(start_date: str, end_date: str) -> DataFrame:
     except Exception as e:
         log_operation(
             step="extract",
+            process="profiling",
             status="failed",
             source="api",
             table_name="milestones",

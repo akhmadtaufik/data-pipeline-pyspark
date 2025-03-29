@@ -26,6 +26,7 @@ def extract_csv(file_path: str):
 
         log_operation(
             step="extract",
+            process="profiling",
             status="success",
             source="csv",
             table_name=table_name,
@@ -37,6 +38,7 @@ def extract_csv(file_path: str):
     except Exception as e:
         log_operation(
             step="extract",
+            process="profiling",
             status="failed",
             source="csv",
             table_name=table_name,
