@@ -40,6 +40,7 @@ def profile_all_sources():
     except Exception as e:
         log_operation(
             step="system",
+            process="profiling",
             status="failed",
             source="system",
             table_name="all",
