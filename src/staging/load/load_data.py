@@ -44,6 +44,7 @@ def load_data_to_staging(
     try:
         log_operation(
             step="load",
+            process="staging",
             status="started",
             source=source,
             table_name=target_table,
@@ -85,6 +86,7 @@ def load_data_to_staging(
 
         log_operation(
             step="load",
+            process="staging",
             status="success",
             source=source,
             table_name=target_table,
@@ -96,6 +98,7 @@ def load_data_to_staging(
 
         log_operation(
             step="load",
+            process="staging",
             status="failed",
             source=source,
             table_name=target_table,

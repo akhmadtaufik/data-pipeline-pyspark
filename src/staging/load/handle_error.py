@@ -58,6 +58,7 @@ def handle_error(
 
         log_operation(
             step="backup",
+            process="staging",
             status="success",
             source=source,
             table_name=target_table,
@@ -67,6 +68,7 @@ def handle_error(
     except Exception as e:
         log_operation(
             step="backup",
+            process="staging",
             status="failed",
             source=source,
             table_name=target_table,

@@ -47,6 +47,7 @@ def extract_table_name(db_name: str) -> List[str] | None:
 
         log_operation(
             step="extract",
+            process="staging",
             status="info",
             source="database",
             table_name="system",
@@ -58,6 +59,7 @@ def extract_table_name(db_name: str) -> List[str] | None:
     except Exception as e:
         log_operation(
             step="extract",
+            process="staging",
             status="failed",
             source="database",
             table_name="system",
@@ -98,6 +100,7 @@ def extract_databse(db_name: str, table_name: str) -> DataFrame:
 
         log_operation(
             step="extract",
+            process="staging",
             status="success",
             source="database",
             table_name=table_name,
@@ -109,6 +112,7 @@ def extract_databse(db_name: str, table_name: str) -> DataFrame:
     except Exception as e:
         log_operation(
             step="extract",
+            process="staging",
             status="failed",
             source="database",
             table_name=table_name,
