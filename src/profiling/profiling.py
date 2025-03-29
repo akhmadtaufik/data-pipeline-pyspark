@@ -1,3 +1,4 @@
+import os
 import json
 from datetime import datetime
 from pyspark.sql import DataFrame
@@ -5,6 +6,7 @@ from pyspark.sql.functions import col, count, when, isnull, to_date, min, max
 from minio import Minio
 from io import BytesIO
 from typing import Any
+from urllib.parse import urlparse
 from src.utils.log_message import log_operation
 from src.utils.config import (
     MINIO_ENDPOINT,
@@ -138,6 +140,7 @@ class DataProfiler:
     def _log_start(self):
         log_operation(
             step="profiling",
+            process="profiling",
             status="started",
             source=self.source_type,
             table_name=self.table_name,
@@ -147,6 +150,7 @@ class DataProfiler:
     def _log_success(self):
         log_operation(
             step="profiling",
+            process="profiling",
             status="success",
             source=self.source_type,
             table_name=self.table_name,
@@ -156,6 +160,7 @@ class DataProfiler:
     def _log_error(self, error_msg: str):
         log_operation(
             step="profiling",
+            process="profiling",
             status="failed",
             source=self.source_type,
             table_name=self.table_name,
@@ -206,11 +211,13 @@ class DataProfiler:
         try:
             for col_name in self.data.columns:
                 col_type = self._determine_column_type(col_name)
-                self.report["columns"][col_name] = self._profile_column(
-                    col_name, col_type
-                )
+                self.report["columns"][col_name] = self._profile_column(col_name, col_type)
 
+            # Save to MinIO
             self._save_to_minio()
+            # Save to docs/profiling
+            self._save_locally()
+
             self._log_success()
             return self.report
 
@@ -230,11 +237,15 @@ class DataProfiler:
 
     def _save_to_minio(self) -> str:
         """Save report to MinIO"""
+        parsed_endpoint = urlparse(str(self.MINIO_ENDPOINT))
+
+        endpoint = parsed_endpoint.netloc if parsed_endpoint.netloc else parsed_endpoint.path
+
         client = Minio(
-            str(self.MINIO_ENDPOINT),
+            endpoint,
             access_key=self.ACCESS_KEY,
             secret_key=self.SECRET_KEY,
-            secure=False,
+            secure=(parsed_endpoint.scheme == "https"),
         )
 
         if not client.bucket_exists(str(self.BUCKET)):
@@ -249,3 +260,15 @@ class DataProfiler:
             "application/json",
         )
         return "Report saved successfully"
+
+    def _save_locally(self) -> None:
+        """Save report to local"""
+        directory = "docs/profiling"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        filename = f"{self.table_name}-{datetime.now().strftime('%Y%m%d')}.json"
+        filepath = os.path.join(directory, filename)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(self.report, f, ensure_ascii=False, indent=4)
