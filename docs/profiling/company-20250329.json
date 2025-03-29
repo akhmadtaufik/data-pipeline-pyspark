@@ -1,0 +1,63 @@
+{
+    "table_name": "company",
+    "source_type": "database",
+    "timestamp": "2025-03-29T14:18:28.715933",
+    "columns": {
+        "office_id": {
+            "data_type": "IntegerType()",
+            "missing_pct": 0.0
+        },
+        "object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "description": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "region": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "address1": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "address2": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "city": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "zip_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "state_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "country_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "latitude": {
+            "data_type": "DecimalType(9,6)",
+            "missing_pct": 0.0
+        },
+        "longitude": {
+            "data_type": "DecimalType(9,6)",
+            "missing_pct": 0.0
+        },
+        "created_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        },
+        "updated_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        }
+    }
+}

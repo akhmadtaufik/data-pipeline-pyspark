@@ -1,0 +1,31 @@
+{
+    "table_name": "investments",
+    "source_type": "database",
+    "timestamp": "2025-03-29T14:19:10.304200",
+    "columns": {
+        "investment_id": {
+            "data_type": "IntegerType()",
+            "missing_pct": 0.0
+        },
+        "funding_round_id": {
+            "data_type": "IntegerType()",
+            "missing_pct": 0.0
+        },
+        "funded_object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "investor_object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "created_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        },
+        "updated_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        }
+    }
+}

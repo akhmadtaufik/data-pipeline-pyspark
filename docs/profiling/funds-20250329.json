@@ -1,0 +1,47 @@
+{
+    "table_name": "funds",
+    "source_type": "database",
+    "timestamp": "2025-03-29T14:19:05.661120",
+    "columns": {
+        "fund_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "name": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "funded_at": {
+            "data_type": "DateType()",
+            "missing_pct": 7.5
+        },
+        "raised_amount": {
+            "data_type": "DecimalType(15,2)",
+            "missing_pct": 0.0
+        },
+        "raised_currency_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "source_url": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "source_description": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "created_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        },
+        "updated_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        }
+    }
+}

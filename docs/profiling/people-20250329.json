@@ -1,0 +1,31 @@
+{
+    "table_name": "people",
+    "source_type": "csv",
+    "timestamp": "2025-03-29T14:19:26.156700",
+    "columns": {
+        "people_id": {
+            "data_type": "IntegerType()",
+            "missing_pct": 0.0
+        },
+        "object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "first_name": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "last_name": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "birthplace": {
+            "data_type": "StringType()",
+            "missing_pct": 87.61
+        },
+        "affiliation_name": {
+            "data_type": "StringType()",
+            "missing_pct": 0.01
+        }
+    }
+}

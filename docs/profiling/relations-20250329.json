@@ -1,0 +1,47 @@
+{
+    "table_name": "relations",
+    "source_type": "csv",
+    "timestamp": "2025-03-29T14:19:32.368589",
+    "columns": {
+        "relationship_id": {
+            "data_type": "IntegerType()",
+            "missing_pct": 0.0
+        },
+        "person_object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "relationship_object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "start_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 53.48
+        },
+        "end_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 85.71
+        },
+        "is_past": {
+            "data_type": "BooleanType()",
+            "missing_pct": 0.0
+        },
+        "sequence": {
+            "data_type": "IntegerType()",
+            "missing_pct": 0.0
+        },
+        "title": {
+            "data_type": "StringType()",
+            "missing_pct": 4.03
+        },
+        "created_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        },
+        "updated_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        }
+    }
+}

@@ -1,0 +1,95 @@
+{
+    "table_name": "funding_rounds",
+    "source_type": "database",
+    "timestamp": "2025-03-29T14:18:51.285378",
+    "columns": {
+        "funding_round_id": {
+            "data_type": "IntegerType()",
+            "missing_pct": 0.0
+        },
+        "object_id": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "funded_at": {
+            "data_type": "DateType()",
+            "missing_pct": 0.41
+        },
+        "funding_round_type": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "funding_round_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "raised_amount_usd": {
+            "data_type": "DecimalType(15,2)",
+            "missing_pct": 0.0
+        },
+        "raised_amount": {
+            "data_type": "DecimalType(15,2)",
+            "missing_pct": 0.0
+        },
+        "raised_currency_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "pre_money_valuation_usd": {
+            "data_type": "DecimalType(15,2)",
+            "missing_pct": 0.0
+        },
+        "pre_money_valuation": {
+            "data_type": "DecimalType(15,2)",
+            "missing_pct": 0.0
+        },
+        "pre_money_currency_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "post_money_valuation_usd": {
+            "data_type": "DecimalType(15,2)",
+            "missing_pct": 0.0
+        },
+        "post_money_valuation": {
+            "data_type": "DecimalType(15,2)",
+            "missing_pct": 0.0
+        },
+        "post_money_currency_code": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "participants": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "is_first_round": {
+            "data_type": "BooleanType()",
+            "missing_pct": 0.0
+        },
+        "is_last_round": {
+            "data_type": "BooleanType()",
+            "missing_pct": 0.0
+        },
+        "source_url": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "source_description": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "created_by": {
+            "data_type": "StringType()",
+            "missing_pct": 0.0
+        },
+        "created_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        },
+        "updated_at": {
+            "data_type": "TimestampType()",
+            "missing_pct": 0.0
+        }
+    }
+}
