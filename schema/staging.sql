@@ -1,152 +1,149 @@
 DROP SCHEMA IF EXISTS staging CASCADE;
 CREATE SCHEMA staging;
 
------------------------- SEQUENCES ------------------------
-CREATE SEQUENCE staging.company_office_id_seq;
-CREATE SEQUENCE staging.funds_fund_id_seq;
-CREATE SEQUENCE staging.acquisition_acquisition_id_seq;
-CREATE SEQUENCE staging.funding_rounds_funding_round_id_seq;
-CREATE SEQUENCE staging.investment_investment_id_seq;
-CREATE SEQUENCE staging.ipos_ipo_id_seq;
-CREATE SEQUENCE staging.people_people_id_seq;
-CREATE SEQUENCE staging.relationship_relationship_id_seq;
-
------------------------- TABEL STAGING ------------------------
--- COMPANY
-CREATE TABLE staging.company (
-    office_id INT PRIMARY KEY DEFAULT nextval('staging.company_office_id_seq'),
-    object_id VARCHAR(50),
+-- Company table
+CREATE TABLE IF NOT EXISTS staging.company (
+    office_id VARCHAR(255) PRIMARY KEY,
+    object_id VARCHAR(255),
     description TEXT,
-    region VARCHAR(100),
-    address1 VARCHAR(255),
-    address2 VARCHAR(255),
-    city VARCHAR(100),
-    zip_code VARCHAR(20),
-    state_code VARCHAR(5),
-    country_code VARCHAR(5),
-    latitude DECIMAL(9,6),
-    longitude DECIMAL(9,6),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    region VARCHAR(255),
+    address1 TEXT,
+    address2 TEXT,
+    city VARCHAR(255),
+    zip_code VARCHAR(50),
+    state_code VARCHAR(50),
+    country_code VARCHAR(50),
+    latitude DECIMAL(10, 6),
+    longitude DECIMAL(10, 6),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- FUNDS
-CREATE TABLE staging.funds (
-    fund_id INT PRIMARY KEY DEFAULT nextval('staging.funds_fund_id_seq'),
-    object_id VARCHAR(50) REFERENCES staging.company(object_id),
+-- Funds table
+CREATE TABLE IF NOT EXISTS staging.funds (
+    fund_id VARCHAR(255) PRIMARY KEY,
+    object_id VARCHAR(255),
     name VARCHAR(255),
     funded_at DATE,
-    raised_amount DECIMAL(18,2),
-    raised_currency_code VARCHAR(3),
+    raised_amount DECIMAL(18, 2),
+    raised_currency_code VARCHAR(10),
     source_url TEXT,
     source_description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- ACQUISITION
-CREATE TABLE staging.acquisition (
-    acquisition_id INT PRIMARY KEY DEFAULT nextval('staging.acquisition_acquisition_id_seq'),
-    acquiring_object_id VARCHAR(50),
-    acquired_object_id VARCHAR(50),
+-- Acquisition table
+CREATE TABLE IF NOT EXISTS staging.acquisition (
+    acquisition_id VARCHAR(255) PRIMARY KEY,
+    acquiring_object_id VARCHAR(255),
+    acquired_object_id VARCHAR(255),
     term_code VARCHAR(50),
-    price_amount DECIMAL(18,2),
-    price_currency_code VARCHAR(3),
-    acquired_at TIMESTAMPTZ,
+    price_amount DECIMAL(18, 2),
+    price_currency_code VARCHAR(10),
+    acquired_at TIMESTAMP,
     source_url TEXT,
     source_description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- FUNDING_ROUNDS
-CREATE TABLE staging.funding_rounds (
-    funding_round_id INT PRIMARY KEY DEFAULT nextval('staging.funding_rounds_funding_round_id_seq'),
-    object_id VARCHAR(50) REFERENCES staging.company(object_id),
+-- Funding Rounds table
+CREATE TABLE IF NOT EXISTS staging.funding_rounds (
+    funding_round_id VARCHAR(255) PRIMARY KEY,
+    object_id VARCHAR(255),
     funded_at DATE,
-    funding_round_type VARCHAR(50),
-    funding_round_code VARCHAR(20),
-    raised_amount_usd DECIMAL(18,2),
-    raised_amount DECIMAL(18,2),
-    raised_currency_code VARCHAR(3),
-    pre_money_valuation_usd DECIMAL(18,2),
-    pre_money_valuation DECIMAL(18,2),
-    pre_money_currency_code VARCHAR(3),
-    post_money_valuation_usd DECIMAL(18,2),
-    post_money_valuation DECIMAL(18,2),
-    post_money_currency_code VARCHAR(3),
-    participants TEXT,
+    funding_round_type VARCHAR(100),
+    funding_round_code VARCHAR(50),
+    raised_amount_usd DECIMAL(18, 2),
+    raised_amount DECIMAL(18, 2),
+    raised_currency_code VARCHAR(10),
+    pre_money_valuation_usd DECIMAL(18, 2),
+    pre_money_valuation DECIMAL(18, 2),
+    pre_money_currency_code VARCHAR(10),
+    post_money_valuation_usd DECIMAL(18, 2),
+    post_money_valuation DECIMAL(18, 2),
+    post_money_currency_code VARCHAR(10),
+    participants INTEGER,
     is_first_round BOOLEAN,
     is_last_round BOOLEAN,
     source_url TEXT,
     source_description TEXT,
     created_by VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- INVESTMENT
-CREATE TABLE staging.investment (
-    investment_id INT PRIMARY KEY DEFAULT nextval('staging.investment_investment_id_seq'),
-    funding_round_id INT REFERENCES staging.funding_rounds(funding_round_id),
-    funded_object_id VARCHAR(50),
-    investor_object_id VARCHAR(50),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+-- Investment table
+CREATE TABLE IF NOT EXISTS staging.investment (
+    investment_id VARCHAR(255) PRIMARY KEY,
+    funding_round_id VARCHAR(255),
+    funded_object_id VARCHAR(255),
+    investor_object_id VARCHAR(255),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- IPOS
-CREATE TABLE staging.ipos (
-    ipo_id INT PRIMARY KEY DEFAULT nextval('staging.ipos_ipo_id_seq'),
-    object_id VARCHAR(50) REFERENCES staging.company(object_id),
-    valuation_amount DECIMAL(18,2),
-    valuation_currency_code VARCHAR(3),
-    raised_amount DECIMAL(18,2),
-    raised_currency_code VARCHAR(3),
-    public_at TIMESTAMPTZ,
+-- IPOs table
+CREATE TABLE IF NOT EXISTS staging.ipos (
+    ipo_id VARCHAR(255) PRIMARY KEY,
+    object_id VARCHAR(255),
+    valuation_amount DECIMAL(18, 2),
+    valuation_currency_code VARCHAR(10),
+    raised_amount DECIMAL(18, 2),
+    raised_currency_code VARCHAR(10),
+    public_at TIMESTAMP,
     stock_symbol VARCHAR(50),
     source_url TEXT,
     source_description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- PEOPLE
-CREATE TABLE staging.people (
-    people_id INT PRIMARY KEY DEFAULT nextval('staging.people_people_id_seq'),
-    object_id VARCHAR(50) REFERENCES staging.company(object_id),
+-- People table
+CREATE TABLE IF NOT EXISTS staging.people (
+    people_id VARCHAR(255) PRIMARY KEY,
+    object_id VARCHAR(255),
     first_name VARCHAR(255),
     last_name VARCHAR(255),
     birthplace VARCHAR(255),
     affiliation_name VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- RELATIONSHIP
-CREATE TABLE staging.relationship (
-    relationship_id INT PRIMARY KEY DEFAULT nextval('staging.relationship_relationship_id_seq'),
-    person_object_id VARCHAR(50) REFERENCES staging.people(people_id),
-    relationship_object_id VARCHAR(50) REFERENCES staging.company(object_id),
+-- Relationship table
+CREATE TABLE IF NOT EXISTS staging.relationships (
+    relationship_id VARCHAR(255) PRIMARY KEY,
+    person_object_id VARCHAR(255),
+    relationship_object_id VARCHAR(255),
     start_at DATE,
     end_at DATE,
     is_past BOOLEAN,
-    sequence INT,
+    sequence INTEGER,
     title VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
 
--- MILESTONES (Dari API)
-CREATE TABLE staging.milestones (
-    milestone_id INT PRIMARY KEY,
-    object_id VARCHAR(50) REFERENCES staging.company(object_id),
-    created_at TIMESTAMPTZ,
+-- Milestones table
+CREATE TABLE IF NOT EXISTS staging.milestones (
+    milestone_id VARCHAR(255) PRIMARY KEY,
+    object_id VARCHAR(255),
     description TEXT,
     milestone_at DATE,
     milestone_code VARCHAR(50),
-    source_description TEXT,
     source_url TEXT,
-    updated_at TIMESTAMPTZ,
-    loaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    source_description TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    etl_date TIMESTAMP
 );
