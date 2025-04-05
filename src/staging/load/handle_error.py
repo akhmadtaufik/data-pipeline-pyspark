@@ -2,6 +2,7 @@ from datetime import datetime
 from pyspark.sql import DataFrame
 from minio import Minio
 from io import BytesIO
+from urllib.parse import urlparse
 from src.utils.log_message import log_operation
 from src.utils.config import (
     MINIO_ENDPOINT,
@@ -27,15 +28,34 @@ def handle_error(
         Exception: Re-raises any exception encountered during the backup process.
     """
 
-    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     try:
+        if df is None:
+            log_operation(
+                step="backup",
+                process="staging",
+                status="failed",
+                source=source,
+                table_name=target_table,
+                error_msg="Cannot backup: DataFrame is None",
+            )
+            return
+
+        parsed_endpoint = urlparse(str(MINIO_ENDPOINT))
+
+        endpoint = (
+            parsed_endpoint.netloc
+            if parsed_endpoint.netloc
+            else parsed_endpoint.path
+        )
+
         # Initialize MinIO client
         client = Minio(
-            endpoint=str((MINIO_ENDPOINT)),
+            endpoint=endpoint,
             access_key=MINIO_ACCESS_KEY,
             secret_key=MINIO_SECRET_KEY,
-            secure=False,
+            secure=(parsed_endpoint.scheme == "https"),
         )
 
         # Make a bucket if it doesn't exist
@@ -43,27 +63,38 @@ def handle_error(
             client.make_bucket(str(MINIO_BUCKET_NAME))
 
         # Convert DataFrame to CSV and then to bytes
-        csv_bytes = df.toPandas().to_csv(index=False).encode("utf-8")  # type: ignore
-        csv_buffer = BytesIO(csv_bytes)  # type: ignore
-        file_name = f"{target_table}_{current_date}.csv"
+        try:
+            csv_bytes = df.toPandas().to_csv(index=False).encode("utf-8")  # type: ignore
+            csv_buffer = BytesIO(csv_bytes)  # type: ignore
+            file_name = f"{target_table}_{current_date}.csv"
 
-        # Upload the CSV file to the bucket
-        client.put_object(
-            bucket_name=str((MINIO_BUCKET_NAME)),
-            object_name=file_name,
-            data=csv_buffer,
-            length=len(csv_bytes),  # type: ignore
-            content_type="text/csv",
-        )
+            # Upload the CSV file to the bucket
+            client.put_object(
+                bucket_name=str((MINIO_BUCKET_NAME)),
+                object_name=file_name,
+                data=csv_buffer,
+                length=len(csv_bytes),  # type: ignore
+                content_type="text/csv",
+            )
 
-        log_operation(
-            step="backup",
-            process="staging",
-            status="success",
-            source=source,
-            table_name=target_table,
-            message=f"Backup berhasil: {file_name}",
-        )
+            log_operation(
+                step="backup",
+                process="staging",
+                status="success",
+                source=source,
+                table_name=target_table,
+                message=f"Backup berhasil: {file_name}",
+            )
+        except Exception as csv_error:
+            # Handle specific errors when converting to CSV
+            log_operation(
+                step="backup",
+                process="staging",
+                status="failed",
+                source=source,
+                table_name=target_table,
+                error_msg=f"Gagal mengkonversi DataFrame ke CSV: {str(csv_error)}",
+            )
 
     except Exception as e:
         log_operation(
@@ -74,4 +105,3 @@ def handle_error(
             table_name=target_table,
             error_msg=f"Gagal backup: {str(e)}",
         )
-        raise
