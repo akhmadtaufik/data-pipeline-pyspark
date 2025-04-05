@@ -69,7 +69,7 @@ def extract_api(start_date: str, end_date: str) -> DataFrame:
             return spark.createDataFrame([], ["milestone_id", "object_id"])  # type: ignore
 
         # Let Spark infer the schema based on the data
-        df: DataFrame = spark.createDataFrame(rows)  # type: ignore
+        df: DataFrame = spark.createDataFrame(cleaned_data)  # type: ignore
 
         # Log the schema that was inferred
         log_operation(
