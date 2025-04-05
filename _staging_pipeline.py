@@ -1,8 +1,8 @@
-import logging
-from typing import List, Any
-from pyspark.sql import DataFrame
+from typing import Dict, Optional
+from pyspark.sql import DataFrame, SparkSession
 from src.utils.log_message import log_operation
 from src.utils.config import DB_STAGING
+from src.utils.spark_session import init_spark_session
 from src.staging.extract.extract_csv import extract_csv
 from src.staging.extract.extract_api import extract_api
 from src.staging.extract.extract_database import (
@@ -23,7 +23,12 @@ def run_pipeline():
     Raises:
         Exception: If an error occurs during any stage of the pipeline.
     """
+    spark: Optional[SparkSession] = None
+
     try:
+        # Initialize Spark session that will be used throughout the pipeline
+        spark = init_spark_session()
+
         # --------------- Extract From Source---------------#
         # 1. Extract CSV
         people_df = extract_csv("data/raw/people.csv")
@@ -32,7 +37,7 @@ def run_pipeline():
         # 2. Extract Database
         db_name = str(DB_STAGING)
         tables = extract_table_name(db_name)
-        dataframes = {
+        dataframes: Dict[str, DataFrame] = {
             table: extract_databse(db_name, table) for table in tables  # type: ignore
         }
 
@@ -56,6 +61,13 @@ def run_pipeline():
 
     except Exception as e:
         pass
+
+    finally:
+        if spark:
+            try:
+                spark.stop()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
