@@ -1,27 +1,32 @@
+import time
 from typing import Dict, Optional
 from pyspark.sql import DataFrame, SparkSession
 from src.utils.log_message import log_operation
-from src.utils.config import DB_STAGING
+from src.utils.config import DB_STAGING, DB_SOURCE
 from src.utils.spark_session import init_spark_session
 from src.staging.extract.extract_csv import extract_csv
 from src.staging.extract.extract_api import extract_api
 from src.staging.extract.extract_database import (
     extract_table_name,
-    extract_databse,
+    extract_database,
 )
 from src.staging.load.load_data import load_data_to_staging
 
 
-def run_pipeline():
+def run_pipeline() -> None:
     """
-    Runs the data pipeline to extract data from various sources and load it into the staging area.
+    Executes the data pipeline process, extracting data from various sources and loading it into the staging area.
 
-    This function orchestrates the extraction of data from CSV files, a PostgreSQL database,
-    and an API, followed by loading the extracted data into the staging tables. It handles
-    any exceptions that occur during the process.
+    This function initializes a SparkSession and performs the following steps:
+    1. Extracts data from CSV files and a PostgreSQL database.
+    2. Extracts data from an API within a specified date range.
+    3. Loads the extracted data into the staging area using the organization's logging utility.
 
-    Raises:
-        Exception: If an error occurs during any stage of the pipeline.
+    The function handles exceptions during extraction and loading, logging any errors encountered.
+    Finally, it ensures the SparkSession is stopped, with a fallback to forcefully terminate it if necessary.
+
+    Returns:
+        None
     """
     spark: Optional[SparkSession] = None
 
@@ -35,11 +40,33 @@ def run_pipeline():
         relations_df = extract_csv("data/raw/relationships.csv")
 
         # 2. Extract Database
-        db_name = str(DB_STAGING)
-        tables = extract_table_name(db_name)
-        dataframes: Dict[str, DataFrame] = {
-            table: extract_databse(db_name, table) for table in tables  # type: ignore
-        }
+        db_name = str(DB_SOURCE)
+        try:
+            tables = extract_table_name(db_name)
+            log_operation(
+                step="extract",
+                process="staging",
+                status="info",
+                source="database",
+                table_name="system",
+                message=f"Memproses {len(tables)} tabel dari {db_name}",  # type: ignore
+            )
+
+            dataframes: Dict[str, DataFrame] = {}
+            for table in tables:  # type: ignore
+                df = extract_database(db_name, table)
+                dataframes[table] = df
+
+        except Exception as e:
+            log_operation(
+                step="extract",
+                process="staging",
+                status="failed",
+                source="database",
+                table_name="system",
+                error_msg=str(e),
+            )
+            raise
 
         # 3. Extract API
         start_date = "2000-01-01"
@@ -65,9 +92,15 @@ def run_pipeline():
     finally:
         if spark:
             try:
+                time.sleep(5)
                 spark.stop()
-            except Exception:
-                pass
+                print("SparkSession berhasil dihentikan")
+            except Exception as stop_error:
+                print(f"Gagal menghentikan SparkSession: {str(stop_error)}")
+                # Force kill jika diperlukan (Windows)
+                import os
+
+                os.system("taskkill /F /IM java.exe")
 
 
 if __name__ == "__main__":
