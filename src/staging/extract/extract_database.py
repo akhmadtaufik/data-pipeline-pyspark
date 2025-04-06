@@ -68,7 +68,7 @@ def extract_table_name(db_name: str) -> List[str] | None:
         raise
 
 
-def extract_databse(db_name: str, table_name: str) -> DataFrame:
+def extract_database(db_name: str, table_name: str) -> DataFrame:
     """
     Extracts data from a specified PostgreSQL database table into a Spark DataFrame.
 
@@ -104,7 +104,7 @@ def extract_databse(db_name: str, table_name: str) -> DataFrame:
             status="success",
             source="database",
             table_name=table_name,
-            message=f"Berhasil ekstrak {table_name}",
+            message=f"Berhasil ekstrak {table_name} dari {db_name}",
         )
 
         return df
