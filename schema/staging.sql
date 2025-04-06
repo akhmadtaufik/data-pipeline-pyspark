@@ -78,8 +78,8 @@ CREATE TABLE IF NOT EXISTS staging.funding_rounds (
     etl_date TIMESTAMP
 );
 
--- Investment table
-CREATE TABLE IF NOT EXISTS staging.investment (
+-- Investments table
+CREATE TABLE IF NOT EXISTS staging.investments (
     investment_id VARCHAR(255) PRIMARY KEY,
     funding_round_id VARCHAR(255),
     funded_object_id VARCHAR(255),
