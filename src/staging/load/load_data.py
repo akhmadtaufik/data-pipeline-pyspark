@@ -2,6 +2,7 @@ import traceback
 import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine, text
+from typing import Any
 from datetime import datetime
 from pyspark.sql import DataFrame
 from src.staging.load.handle_error import handle_error
@@ -22,151 +23,136 @@ engine = create_engine(
 )
 
 
-def get_last_etl_date(schema: str, table_name: str) -> datetime:
+def check_table_status(schema: str, table_name: str) -> tuple[Any, Any, Any]:
     """
-    Retrieves the last ETL run date from the staging table.
-    If the table does not exist or the etl_date column is empty,
-    it returns a default date (January 1, 1100).
+    Checks the status of a specified table in the database.
 
-    Args:
-        schema (str): The schema name (e.g., 'staging').
-        table_name (str): The target table name.
+    This function connects to a PostgreSQL database and checks if a specified table exists
+    within a given schema. It also checks for the existence of an 'etl_date' column in the table
+    and retrieves the maximum value of 'etl_date' if the column exists. The function logs the
+    status of these checks using the organization's logging system.
+
+    Parameters:
+    - schema (str): The schema name where the table is located.
+    - table_name (str): The name of the table to check.
 
     Returns:
-        datetime: The last ETL run date or the default date if not found.
+    - tuple[Any, Any, Any]: A tuple containing:
+      - A boolean indicating if the table exists.
+      - A boolean indicating if the 'etl_date' column exists.
+      - The maximum 'etl_date' value if the column exists, otherwise None.
     """
-    spark = init_spark_session()
-    full_table_name = f"{schema}.{table_name}"
-    default_date = datetime(1100, 1, 1)
+    conn = psycopg2.connect(
+        host=POSTGRES_HOST,
+        port=POSTGRES_PORT,
+        dbname=DB_STAGING,
+        user=POSTGRES_USER,
+        password=POSTGRES_PASSWORD,
+    )
+
+    table_exists = False
+    etl_date_exists = False
+    max_etl_date = None
 
     try:
-        query = f"(SELECT MAX(etl_date) as last_etl_date FROM {full_table_name}) as t"
+        with conn.cursor() as cursor:
+            # Check table existence
+            cursor.execute(
+                f"""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_schema = '{schema}'
+                    AND table_name = '{table_name}'
+                )
+            """
+            )
+            table_exists = cursor.fetchone()[0]  # type: ignore
 
-        df = spark.read.jdbc(
-            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_STAGING}",
-            table=query,
-            properties={
-                "user": POSTGRES_USER,
-                "password": POSTGRES_PASSWORD,
-                "driver": "org.postgresql.Driver",
-            },  # type: ignore
-        )
+            if not table_exists:
+                log_operation(
+                    step="status_check",
+                    process="staging",
+                    status="info",
+                    source="system",
+                    table_name=table_name,
+                    message=f"Tabel {schema}.{table_name} tidak ditemukan",
+                )
+                return (False, False, None)
 
-        # If the query returns data and the value is not null, return that value
-        if df.count() > 0:
-            row = df.collect()[0]
-            if row["last_etl_date"] is not None:
-                return row["last_etl_date"]
+            # Check etl_date column existence
+            cursor.execute(
+                f"""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = '{schema}'
+                    AND table_name = '{table_name}'
+                    AND column_name = 'etl_date'
+                )
+            """
+            )
+            etl_date_exists = cursor.fetchone()[0]  # type: ignore
 
-        # If the etl_date is not found, log a warning and return the default_date
-        log_operation(
-            step="load",
-            process="staging",
-            status="warning",
-            source="system",
-            table_name=table_name,
-            message=f"No etl_date found in table {full_table_name}, using default date {default_date}",
-        )
-        return default_date
+            # Get max etl_date if column exists
+            if etl_date_exists:
+                cursor.execute(
+                    f"""
+                    SELECT MAX(etl_date) FROM {schema}.{table_name}
+                """
+                )
+                max_etl_date = cursor.fetchone()[0]  # type: ignore
+                log_operation(
+                    step="status_check",
+                    process="staging",
+                    status="info",
+                    source="system",
+                    table_name=table_name,
+                    message=f"Max etl_date: {max_etl_date}",
+                )
 
     except Exception as e:
-        # Log the error and return the default_date if an exception occurs (e.g., table not existing)
         log_operation(
-            step="load",
+            step="status_check",
             process="staging",
-            status="warning",
+            status="error",
             source="system",
             table_name=table_name,
             error_msg=str(e),
-            message=f"Failed to retrieve last_etl_date, using default date {default_date}",
         )
-        return default_date
+        raise
+    finally:
+        conn.close()
+
+    return (table_exists, etl_date_exists, max_etl_date)
 
 
-def load_data_to_staging(
-    df: DataFrame, target_table: str, source: str, schema: str = "staging"
-) -> None:
+def full_load_with_spark(df: DataFrame, schema: str, table_name: str) -> None:
     """
-    Loads data from a DataFrame into a staging table in a PostgreSQL database.
+    Performs a full load of the given DataFrame into a PostgreSQL database table.
 
-    This function filters the DataFrame for new data based on the last ETL date,
-    writes the filtered data to a temporary table, and performs an upsert operation
-    into the target staging table. It logs the operation status and handles any
-    errors that occur during the process.
+    This function writes the DataFrame to a specified schema and table in a PostgreSQL
+    database using JDBC. It overwrites any existing data in the table. After the load
+    operation, it logs the success or failure of the operation using the `log_operation`
+    function.
 
-    Args:
-        df (DataFrame): The DataFrame containing the data to be loaded.
-        target_table (str): The name of the target table in the staging schema.
-        source (str): The source of the data being loaded.
-        schema (str, optional): The schema where the target table resides. Defaults to "staging".
+    Parameters
+    ----------
+    df : DataFrame
+        The DataFrame to be loaded into the database.
+    schema : str
+        The schema in the PostgreSQL database where the table resides.
+    table_name : str
+        The name of the table in the PostgreSQL database.
 
-    Raises:
-        Exception: If an error occurs during the data loading process.
+    Raises
+    ------
+    Exception
+        If the load operation fails, the exception is logged and re-raised.
     """
-    full_table_name = f"{schema}.{target_table}"
-    temp_table_name = f"temp_{target_table}"
-
-    # Initialize new_data to prevent errors if exception happens early
-    new_data = df
-
     try:
-        log_operation(
-            step="load",
-            process="staging",
-            status="started",
-            source=source,
-            table_name=target_table,
-            message="Memulai proses load",
-        )
-
-        # Check if DataFrame is not None and not empty
-        if df is None:
-            raise ValueError("DataFrame is None")
-
-        if df.rdd.isEmpty():
-            log_operation(
-                step="load",
-                process="staging",
-                status="skipped",
-                source=source,
-                table_name=target_table,
-                message="DataFrame kosong, tidak ada data untuk di-load",
-            )
-            return
-
-        # Get and filter data using SQL query syntax
-        last_etl_date: datetime = get_last_etl_date(schema, target_table)
-        date_filter: str = last_etl_date.strftime("%Y-%m-%d %H:%M:%S")
-
-        if "etl_date" in df.columns:
-            new_data = df.filter(f"etl_date > '{date_filter}'")  # type: ignore
-
-            # Check if filtered data is empty
-            if new_data.rdd.isEmpty():
-                log_operation(
-                    step="load",
-                    process="staging",
-                    status="skipped",
-                    source=source,
-                    table_name=target_table,
-                    message=f"Tidak ada data baru setelah {date_filter}",
-                )
-                return
-        else:
-            new_data = df
-            log_operation(
-                step="load",
-                process="staging",
-                status="info",
-                source=source,
-                table_name=target_table,
-                message="Kolom etl_date tidak ditemukan, menggunakan semua data",
-            )
-
-        # Write to temporary table
-        new_data.write.jdbc(
+        df.write.jdbc(
             url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_STAGING}",
-            table=temp_table_name,
+            table=f"{schema}.{table_name}",
             mode="overwrite",
             properties={
                 "user": POSTGRES_USER,
@@ -174,45 +160,241 @@ def load_data_to_staging(
                 "driver": "org.postgresql.Driver",
             },  # type: ignore
         )
+        log_operation(
+            step="full_load",
+            process="staging",
+            status="success",
+            source="spark",
+            table_name=table_name,
+            message=f"Berhasil full load {df.count()} records",
+        )
+    except Exception as e:
+        log_operation(
+            step="full_load",
+            process="staging",
+            status="failed",
+            source="spark",
+            table_name=table_name,
+            error_msg=str(e),
+        )
+        raise
 
-        # Execute upsert
-        try:
-            spark.sql(  # type: ignore
-                f"""
-                INSERT INTO {full_table_name}
-                SELECT * FROM {temp_table_name}
-                ON CONFLICT (id)
-                DO UPDATE SET
-                    updated_at = EXCLUDED.updated_at,
-                    etl_date = EXCLUDED.etl_date
-            """
-            )
-        except Exception as sql_error:
-            # Provide more specific error information for SQL errors
+
+def incremental_load_with_pandas(
+    df: DataFrame,
+    schema: str,
+    table_name: str,
+    max_etl_date: datetime,
+    source: str,
+) -> None:
+    """
+    Performs an incremental data load from a Spark DataFrame to a PostgreSQL table.
+
+    This function filters the input DataFrame for records with an 'etl_date' greater
+    than the specified 'max_etl_date', converts it to a Pandas DataFrame, and loads
+    it into a temporary PostgreSQL table. It then performs an UPSERT operation to
+    insert or update records in the target table based on the 'id' column. The
+    function logs each step of the process, including skipped loads, successful
+    writes, and errors.
+
+    Parameters:
+    - df (DataFrame): The Spark DataFrame containing the data to be loaded.
+    - schema (str): The schema of the target PostgreSQL table.
+    - table_name (str): The name of the target PostgreSQL table.
+    - max_etl_date (datetime): The maximum ETL date to filter records.
+    - source (str): The source identifier for logging purposes.
+
+    Returns:
+    - None
+
+    Raises:
+    - Exception: If any error occurs during the load process.
+    """
+    full_table = f"{schema}.{table_name}"
+    temp_table = f"temp_{table_name}"
+
+    try:
+        # Convert and filter data
+        pandas_df = df.filter(f"etl_date > '{max_etl_date}'").toPandas()  # type: ignore
+
+        if pandas_df.empty:  # type: ignore
             log_operation(
-                step="load",
+                step="incremental_load",
+                process="staging",
+                status="skipped",
+                source=source,
+                table_name=table_name,
+                message="Tidak ada data baru untuk di-load",
+            )
+            return
+
+        # Write to temporary table
+        pandas_df.to_sql(  # type: ignore
+            name=temp_table, con=engine, if_exists="replace", index=False
+        )
+        log_operation(
+            step="incremental_load",
+            process="staging",
+            status="info",
+            source=source,
+            table_name=table_name,
+            message=f"Berhasil menulis {len(pandas_df)} records ke tabel temp",  # type: ignore
+        )
+
+        # Execute UPSERT
+        with engine.connect() as conn:
+            with conn.begin():
+                upsert_sql = f"""
+                    INSERT INTO {full_table}
+                    SELECT * FROM {temp_table}
+                    ON CONFLICT (id)
+                    DO UPDATE SET
+                        updated_at = EXCLUDED.updated_at,
+                        etl_date = EXCLUDED.etl_date
+                """
+                conn.execute(text(upsert_sql))
+                conn.execute(text(f"DROP TABLE IF EXISTS {temp_table}"))
+
+        log_operation(
+            step="incremental_load",
+            process="staging",
+            status="success",
+            source=source,
+            table_name=table_name,
+            message=f"Berhasil upsert {len(pandas_df)} records",  # type: ignore
+        )
+
+    except Exception as e:
+        log_operation(
+            step="incremental_load",
+            process="staging",
+            status="failed",
+            source=source,
+            table_name=table_name,
+            error_msg=str(e),
+        )
+        raise
+
+
+def load_data_to_staging(
+    df: DataFrame, target_table: str, source: str, schema: str = "staging"
+) -> None:
+    """
+    Loads data into a staging table in a PostgreSQL database with a dynamic strategy.
+
+    This function determines the appropriate loading strategy (incremental or full load)
+    based on the existence of the target table and the 'etl_date' column. It logs each
+    step of the process, including validation, strategy decision, and completion. In case
+    of errors, it attempts to back up the data and logs the error details.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data to be loaded.
+    - target_table (str): The name of the target table in the database.
+    - source (str): The source identifier for logging purposes.
+    - schema (str, optional): The schema of the target table, default is "staging".
+
+    Returns:
+    - None
+
+    Raises:
+    - ValueError: If the DataFrame is None or empty.
+    - Exception: If any error occurs during the load process.
+    """
+    try:
+        log_operation(
+            step="load_init",
+            process="staging",
+            status="started",
+            source=source,
+            table_name=target_table,
+            message="Memulai proses loading data",
+        )
+
+        # Validate DataFrame
+        if df is None:
+            log_operation(
+                step="validation",
                 process="staging",
                 status="failed",
                 source=source,
                 table_name=target_table,
-                error_msg=f"SQL Error: {str(sql_error)}",
+                error_msg="DataFrame is None",
             )
-            raise
+            raise ValueError("DataFrame tidak valid")
+
+        if df.count() == 0:
+            log_operation(
+                step="validation",
+                process="staging",
+                status="skipped",
+                source=source,
+                table_name=target_table,
+                message="DataFrame kosong",
+            )
+            return
+
+        # Check table status
+        table_exists, etl_date_exists, max_etl_date = check_table_status(
+            schema, target_table
+        )
+
+        # Load strategy decision
+        if table_exists and etl_date_exists and max_etl_date is not None:
+            log_operation(
+                step="load_strategy",
+                process="staging",
+                status="info",
+                source=source,
+                table_name=target_table,
+                message="Memulai incremental load",
+            )
+            incremental_load_with_pandas(
+                df, schema, target_table, max_etl_date, source
+            )
+        else:
+            log_operation(
+                step="load_strategy",
+                process="staging",
+                status="info",
+                source=source,
+                table_name=target_table,
+                message="Memulai full load",
+            )
+            full_load_with_spark(df, schema, target_table)
 
         log_operation(
-            step="load",
+            step="load_complete",
             process="staging",
             status="success",
             source=source,
             table_name=target_table,
-            message=f"Data berhasil di-load ({new_data.count()} records)",
+            message="Proses load selesai",
         )
 
     except Exception as e:
-        error_msg = f"Error: {str(e)}\n{traceback.format_exc()}"
+        error_msg = f"{str(e)}\n{traceback.format_exc()}"
 
+        log_operation(
+            step="load_error",
+            process="staging",
+            status="failed",
+            source=source,
+            table_name=target_table,
+            error_msg=error_msg,
+            message="Proses load gagal",
+        )
+
+        # Backup failed data
         try:
-            handle_error(new_data, target_table, e, source)
+            handle_error(df, target_table, e, source)  # type: ignore
+            log_operation(
+                step="backup",
+                process="staging",
+                status="success",
+                source=source,
+                table_name=target_table,
+                message="Backup data gagal berhasil",
+            )
         except Exception as backup_error:
             log_operation(
                 step="backup",
@@ -220,32 +402,32 @@ def load_data_to_staging(
                 status="failed",
                 source=source,
                 table_name=target_table,
-                error_msg=f"Backup error: {str(backup_error)}",
+                error_msg=str(backup_error),
+                message="Gagal melakukan backup",
             )
 
-        log_operation(
-            step="load",
-            process="staging",
-            status="failed",
-            source=source,
-            table_name=target_table,
-            error_msg=error_msg,
-        )
-
-        # Re-raise the exception to let the pipeline know something went wrong
         raise
 
     finally:
-        # Ensure temp table is dropped even if an error occurs
+        # Cleanup temporary tables
         try:
-            if spark.catalog.tableExists(temp_table_name):
-                spark.sql(f"DROP TABLE IF EXISTS {temp_table_name}")  # type: ignore
-        except Exception as drop_error:
+            with engine.connect() as conn:
+                conn.execute(text(f"DROP TABLE IF EXISTS temp_{target_table}"))
             log_operation(
-                step="load",
+                step="cleanup",
+                process="staging",
+                status="info",
+                source=source,
+                table_name=target_table,
+                message="Berhasil membersihkan tabel temp",
+            )
+        except Exception as e:
+            log_operation(
+                step="cleanup",
                 process="staging",
                 status="warning",
                 source=source,
                 table_name=target_table,
-                message=f"Gagal menghapus tabel temp: {str(drop_error)}",
+                error_msg=str(e),
+                message="Gagal membersihkan tabel temp",
             )
