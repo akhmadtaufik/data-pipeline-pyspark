@@ -11,12 +11,11 @@ os.environ["HADOOP_HOME"] = HADOOP_HOME
 
 def init_spark_session() -> SparkSession:
     """
-    Initialize and configure a SparkSession for the data pipeline.
+    Initializes and returns a SparkSession configured for a data pipeline.
 
-    This function sets up a SparkSession with a specified application name
-    and configuration settings, including the Hadoop home directory and
-    maximum number of fields to display in debug output. It also sets the
-    log level of the Spark context to "ERROR" to minimize log verbosity.
+    This function sets up a SparkSession with specific configurations for
+    memory allocation, network timeout, and PySpark Arrow optimization.
+    It also sets the log level to 'ERROR' to minimize log output.
 
     Returns:
         SparkSession: A configured SparkSession instance.
@@ -25,6 +24,11 @@ def init_spark_session() -> SparkSession:
         SparkSession.builder.appName("Data Pipeline")  # type: ignore
         .config("spark.hadoop.home.dir", HADOOP_HOME)
         .config("spark.sql.debug.maxToStringFields", 100)
+        .config("spark.executor.memory", "2g")
+        .config("spark.driver.memory", "2g")
+        .config("spark.network.timeout", "600s")
+        .config("spark.executor.heartbeatInterval", "60s")
+        .config("spark.sql.execution.arrow.pyspark.enabled", "true")
         .getOrCreate()
     )
 
