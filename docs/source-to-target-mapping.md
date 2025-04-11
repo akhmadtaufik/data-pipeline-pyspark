@@ -189,3 +189,27 @@ This document outlines the transformation process from staging tables to data wa
 | `fact_investment` | `investment_amount`, `investment_currency_code`, `source_url`, `source_description` | No source data |
 | `fact_relationship` | `end_date_id` | 85.71% missing data |
 | `dim_investor` | `investor_type` | No direct source mapping |
+
+## ETL Processing Order
+
+For optimal loading with proper referential integrity, follow this order:
+
+1. **Dimension Tables (Independent)**:
+   - `warehouse.dim_date` (Generate dates from 2000-01-01 to 2024-12-31)
+   - `warehouse.dim_company` (from staging.company)
+   - `warehouse.dim_location` (from staging.company)
+   - `warehouse.dim_person` (from staging.people)
+   - `warehouse.dim_fund` (from staging.funds)
+   - `warehouse.dim_relationship_type` (from staging.relations)
+   - `warehouse.dim_round_type` (from staging.funding_rounds)
+
+2. **Fact Tables (Dependent on Dimensions)**:
+   - `warehouse.fact_funding_round` (from staging.funding_rounds)
+   - `warehouse.dim_investor` (from staging.investments, after funding_round creation)
+   - `warehouse.fact_ipo` (from staging.ipos)
+   - `warehouse.fact_acquisition` (from staging.acquisition)
+   - `warehouse.fact_relationship` (from staging.relations)
+   - `warehouse.fact_fund` (from staging.funds)
+
+3. **Fact Tables (Dependent on Other Facts)**:
+   - `warehouse.fact_investment` (from staging.investments, after fact_funding_round creation)
