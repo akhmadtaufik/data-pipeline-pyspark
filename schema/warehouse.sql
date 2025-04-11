@@ -47,7 +47,6 @@ CREATE TABLE warehouse.dim_person (
     first_name VARCHAR(255),
     last_name VARCHAR(255),
     full_name VARCHAR(511),
-    birthplace VARCHAR(255),
     affiliation_name VARCHAR(255),
     valid_from TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     valid_to TIMESTAMP,
@@ -93,7 +92,6 @@ CREATE TABLE warehouse.dim_fund (
 CREATE TABLE warehouse.dim_investor (
     investor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     object_id_nk VARCHAR(255) NOT NULL,
-    investor_type VARCHAR(50),
     valid_from TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     valid_to TIMESTAMP,
     is_current BOOLEAN DEFAULT TRUE,
@@ -146,7 +144,7 @@ CREATE TABLE warehouse.fact_funding_round (
     post_money_valuation_usd DECIMAL(18, 2),
     post_money_valuation DECIMAL(18, 2),
     post_money_currency_code VARCHAR(10),
-    participants INTEGER,
+    participants TEXT,
     is_first_round BOOLEAN,
     is_last_round BOOLEAN,
     source_url TEXT,
@@ -163,10 +161,6 @@ CREATE TABLE warehouse.fact_investment (
     investor_id UUID REFERENCES warehouse.dim_investor(investor_id),
     company_id UUID REFERENCES warehouse.dim_company(company_id),
     investment_date_id INT REFERENCES warehouse.dim_date(date_id),
-    investment_amount DECIMAL(18, 2),
-    investment_currency_code VARCHAR(10),
-    source_url TEXT,
-    source_description TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -211,8 +205,7 @@ CREATE TABLE warehouse.fact_relationship (
     person_id UUID REFERENCES warehouse.dim_person(person_id),
     company_id UUID REFERENCES warehouse.dim_company(company_id),
     relationship_type_id UUID REFERENCES warehouse.dim_relationship_type(relationship_type_id),
-    start_date_id INT REFERENCES warehouse.dim_date(date_id),
-    end_date_id INT REFERENCES warehouse.dim_date(date_id),
+    start_date_id INT REFERENCES warehouse.dim_date(date_id) DEFAULT 19000101,
     is_past BOOLEAN,
     sequence INTEGER,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -302,17 +295,4 @@ $$ LANGUAGE plpgsql;
 -- Populate date dimension for 20 years
 SELECT warehouse.populate_dim_date('2000-01-01', '2024-12-31');
 
--- Create log table for ETL process
-CREATE TABLE IF NOT EXISTS warehouse.etl_log (
-    log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    process_name VARCHAR(255) NOT NULL,
-    table_name VARCHAR(255) NOT NULL,
-    source_count INTEGER,
-    target_count INTEGER,
-    status VARCHAR(50) NOT NULL,
-    error_message TEXT,
-    start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMP,
-    duration_seconds INTEGER,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+
