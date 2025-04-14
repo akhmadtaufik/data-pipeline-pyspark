@@ -5,6 +5,12 @@ from src.utils.spark_session import init_spark_session
 from src.warehouse.extract.extract_staging import extract_staging
 from src.warehouse.transformation.company import transform_company
 from src.warehouse.transformation.location import transform_location
+from src.warehouse.transformation.person import transform_person
+from src.warehouse.transformation.fund import transform_fund
+from src.warehouse.transformation.round_type import transform_round_type
+from src.warehouse.transformation.relationship_type import (
+    transform_relationship_type,
+)
 
 
 def run_warehouse_pipeline() -> None:
@@ -63,6 +69,34 @@ def run_warehouse_pipeline() -> None:
             dim_location_df = transform_location(staging_dataframes["company"])
             dimension_dataframes["dim_location"] = dim_location_df  # type: ignore
             print(f"Successfully stored dim_location DataFrame")
+
+        # Transform person dimension
+        if "people" in staging_dataframes:
+            dim_person_df = transform_person(staging_dataframes["people"])
+            dimension_dataframes["dim_person"] = dim_person_df  # type: ignore
+            print(f"Successfully stored dim_person DataFrame")
+
+        # Transform fund dimension
+        if "funds" in staging_dataframes:
+            dim_fund_df = transform_fund(staging_dataframes["funds"])
+            dimension_dataframes["dim_fund"] = dim_fund_df  # type: ignore
+            print(f"Successfully stored dim_fund DataFrame")
+
+        # Transform relationship type dimension
+        if "relationships" in staging_dataframes:
+            dim_relationship_type_df = transform_relationship_type(
+                staging_dataframes["relationships"]
+            )
+            dimension_dataframes["dim_relationship_type"] = dim_relationship_type_df  # type: ignore
+            print(f"Successfully stored dim_relationship_type DataFrame")
+
+        # Transform round type dimension
+        if "funding_rounds" in staging_dataframes:
+            dim_round_type_df = transform_round_type(
+                staging_dataframes["funding_rounds"]
+            )
+            dimension_dataframes["dim_round_type"] = dim_round_type_df  # type: ignore
+            print(f"Successfully stored dim_round_type DataFrame")
 
         # Step 3: Process fact tables based on dimensions
 
