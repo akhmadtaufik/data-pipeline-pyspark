@@ -13,6 +13,7 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DB_SOURCE = os.getenv("DB_SOURCE")
 DB_LOG = os.getenv("DB_LOG")
 DB_STAGING = os.getenv("DB_STAGING")
+DB_WAREHOUSE = os.getenv("DB_WAREHOUSE")
 
 # Endpoint API
 MILESTONES_API = os.getenv("MILESTONES_API")
