@@ -58,7 +58,7 @@ def write_jdbc(df: DataFrame, db: str, schema: str, table_name: str) -> None:
     None
     """
     df.write.jdbc(
-        url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}",
+        url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}?stringtype=unspecified",
         table=f"{schema}.{table_name}",
         mode="append",
         properties={
