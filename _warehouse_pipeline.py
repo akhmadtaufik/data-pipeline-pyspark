@@ -11,6 +11,7 @@ from src.warehouse.transformation.round_type import transform_round_type
 from src.warehouse.transformation.relationship_type import (
     transform_relationship_type,
 )
+from src.warehouse.transformation.investor import transform_investor
 from src.warehouse.load.load_warehouse import load_warehouse
 
 
@@ -99,6 +100,14 @@ def run_warehouse_pipeline() -> None:
             dimension_dataframes["dim_round_type"] = dim_round_type_df  # type: ignore
             print(f"Successfully stored dim_round_type DataFrame")
 
+        # Transform investor dimension
+        if "investments" in staging_dataframes:
+            dim_investor_df = transform_investor(
+                staging_dataframes["investments"]
+            )
+            dimension_dataframes["dim_investor"] = dim_investor_df  # type: ignore
+            print(f"Successfully stored dim_investor DataFrame")
+
         # Step 3: Process fact tables based on dimensions
 
         # Step 4: Load transformed data into warehouse
@@ -119,6 +128,7 @@ def run_warehouse_pipeline() -> None:
             "dim_fund",
             "dim_relationship_type",
             "dim_round_type",
+            "dim_investor",
         ]
 
         # Step 4.1: Load dimension tables
