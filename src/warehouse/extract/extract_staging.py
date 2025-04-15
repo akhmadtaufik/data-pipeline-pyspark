@@ -1,14 +1,8 @@
 from typing import List
 from pyspark.sql import DataFrame
-from src.utils.spark_session import init_spark_session
 from src.utils.log_message import log_operation
-from src.utils.config import (
-    POSTGRES_HOST,
-    POSTGRES_PORT,
-    POSTGRES_USER,
-    POSTGRES_PASSWORD,
-    DB_STAGING,
-)
+from src.utils.spark_connection import read_jdbc
+from src.utils.config import DB_STAGING
 
 
 def extract_staging(table_name: str) -> DataFrame | None:
@@ -26,17 +20,9 @@ def extract_staging(table_name: str) -> DataFrame | None:
     - DataFrame | None: A Spark DataFrame containing the extracted data if successful,
       otherwise None if an error occurs.
     """
-    spark = init_spark_session()
-
     try:
-        df = spark.read.jdbc(
-            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_STAGING}",
-            table=f"staging.{table_name}",
-            properties={
-                "user": POSTGRES_USER,
-                "password": POSTGRES_PASSWORD,
-                "driver": "org.postgresql.Driver",
-            },  # type: ignore
+        df = read_jdbc(
+            db=str(DB_STAGING), schema="staging", table_name=table_name
         )
 
         log_operation(
