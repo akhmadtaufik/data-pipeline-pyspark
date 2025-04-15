@@ -4,6 +4,29 @@ from src.utils.log_message import log_operation
 
 
 def transform_investor(df: DataFrame) -> DataFrame | None:
+    """
+    Transforms the investor DataFrame by extracting distinct investor object IDs and adding
+    metadata columns.
+
+    This function processes the input DataFrame to create a new DataFrame with distinct
+    investor object IDs and additional columns for metadata such as timestamps and status
+    flags. It logs the operation status using the `log_operation` function.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The input DataFrame containing investor data to be transformed.
+
+    Returns
+    -------
+    DataFrame or None
+        A transformed DataFrame with additional metadata columns, or None if an error occurs.
+
+    Raises
+    ------
+    Exception
+        If the transformation process fails, an exception is raised after logging the error.
+    """
     try:
         # Extract distinct investor object IDs
         transform_df = (
