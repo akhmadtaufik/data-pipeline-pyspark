@@ -1,17 +1,11 @@
-import traceback
 import psycopg2
 from datetime import datetime
 from pyspark.sql import DataFrame, functions as F
 from src.warehouse.load.handle_error import handle_warehouse_error
 from src.utils.log_message import log_operation
-from src.utils.spark_session import init_spark_session
-from src.utils.config import (
-    POSTGRES_HOST,
-    POSTGRES_PORT,
-    POSTGRES_USER,
-    POSTGRES_PASSWORD,
-    DB_WAREHOUSE,
-)
+from src.utils.spark_connection import write_jdbc
+from src.utils.psycopg2_connection import read_db
+from src.utils.config import DB_WAREHOUSE
 
 
 def check_table_max_created_at(table_name: str) -> datetime | None:
@@ -29,13 +23,7 @@ def check_table_max_created_at(table_name: str) -> datetime | None:
     - datetime | None: The maximum 'created_at' timestamp if successful, otherwise None.
     """
     try:
-        conn = psycopg2.connect(
-            host=POSTGRES_HOST,
-            port=POSTGRES_PORT,
-            dbname=DB_WAREHOUSE,
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD,
-        )
+        conn = read_db(db_name=str(DB_WAREHOUSE))
 
         with conn.cursor() as cursor:
             cursor.execute(
@@ -84,13 +72,7 @@ def full_load(df: DataFrame, table_name: str) -> None:
     conn = None
     try:
         # Step 1: Truncate table and dependencies using CASCADE
-        conn = psycopg2.connect(
-            host=POSTGRES_HOST,
-            port=POSTGRES_PORT,
-            dbname=DB_WAREHOUSE,
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD,
-        )
+        conn = read_db(db_name=str(DB_WAREHOUSE))
         conn.autocommit = True  # Enable autocommit for DDL
 
         with conn.cursor() as cursor:
@@ -106,15 +88,8 @@ def full_load(df: DataFrame, table_name: str) -> None:
         )
 
         # Step 2: Load data using append mode
-        df.write.jdbc(
-            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_WAREHOUSE}",
-            table=f"warehouse.{table_name}",
-            mode="append",
-            properties={
-                "user": POSTGRES_USER,
-                "password": POSTGRES_PASSWORD,
-                "driver": "org.postgresql.Driver",
-            },  # type: ignore
+        write_jdbc(
+            df, str(DB_WAREHOUSE), schema="warehouse", table_name=table_name
         )
 
         log_operation(
@@ -188,15 +163,11 @@ def incremental_load(
             )
             return
 
-        filtered_df.write.jdbc(
-            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_WAREHOUSE}",
-            table=f"warehouse.{table_name}",
-            mode="append",
-            properties={
-                "user": POSTGRES_USER,
-                "password": POSTGRES_PASSWORD,
-                "driver": "org.postgresql.Driver",
-            },  # type: ignore
+        write_jdbc(
+            df=filtered_df,
+            db=str(DB_WAREHOUSE),
+            schema="warehouse",
+            table_name=table_name,
         )
 
         log_operation(
