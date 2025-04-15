@@ -18,11 +18,12 @@ def transform_relationship_type(df: DataFrame) -> DataFrame | None:
     - DataFrame: Transformed DataFrame ready for warehouse.dim_relationship_type
     """
     try:
-        # Extract distinct titles from the relationships table
+        # Extract distinct titles from the relationships table, filtering out null titles
         transform_df = (
             df.select(col("title"))  # type: ignore
             .distinct()
-            .withColumn("description", lit(None))
+            .filter(col("title").isNotNull())
+            .withColumn("description", lit(None).cast("string"))
             .withColumn("created_at", current_timestamp())
             .withColumn("updated_at", current_timestamp())
         )

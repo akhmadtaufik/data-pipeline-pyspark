@@ -26,7 +26,7 @@ def transform_company(df: DataFrame) -> DataFrame | None:
             col("state_code"),
             col("country_code"),
             current_timestamp().alias("valid_from"),
-            lit(None).alias("valid_to"),
+            lit(None).cast("timestamp").alias("valid_to"),
             lit(True).alias("is_current"),
             current_timestamp().alias("created_at"),
             current_timestamp().alias("updated_at"),

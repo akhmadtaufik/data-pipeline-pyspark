@@ -11,7 +11,7 @@ def transform_round_type(df: DataFrame) -> DataFrame | None:
                 col("funding_round_type"), col("funding_round_code")
             )
             .distinct()
-            .withColumn("description", lit(None))
+            .withColumn("description", lit(None).cast("string"))
             .withColumn("created_at", current_timestamp())
             .withColumn("updated_at", current_timestamp())
         )

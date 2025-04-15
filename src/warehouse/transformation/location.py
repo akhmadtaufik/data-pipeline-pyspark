@@ -44,7 +44,7 @@ def transform_location(df: DataFrame) -> DataFrame | None:
             col("latitude"),
             col("longitude"),
             current_timestamp().alias("valid_from"),
-            lit(None).alias("valid_to"),
+            lit(None).cast("timestamp").alias("valid_to"),
             lit(True).alias("is_current"),
             current_timestamp().alias("created_at"),
             current_timestamp().alias("updated_at"),
