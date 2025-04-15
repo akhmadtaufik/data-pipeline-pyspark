@@ -11,6 +11,7 @@ from src.warehouse.transformation.round_type import transform_round_type
 from src.warehouse.transformation.relationship_type import (
     transform_relationship_type,
 )
+from src.warehouse.load.load_warehouse import load_warehouse
 
 
 def run_warehouse_pipeline() -> None:
@@ -110,7 +111,23 @@ def run_warehouse_pipeline() -> None:
             message="Starting loading data into warehouse",
         )
 
-        # TODO: Add loading logic for dimension and fact tables
+        # Load dimension tables first (independent ones)
+        dimension_load_order: List[str] = [
+            "dim_company",
+            "dim_location",
+            "dim_person",
+            "dim_fund",
+            "dim_relationship_type",
+            "dim_round_type",
+        ]
+
+        # Step 4.1: Load dimension tables
+        for dim_name in dimension_load_order:
+            if dim_name in dimension_dataframes:
+                load_warehouse(
+                    df=dimension_dataframes[dim_name],
+                    table_name=dim_name,
+                )
 
         log_operation(
             step="pipeline",
