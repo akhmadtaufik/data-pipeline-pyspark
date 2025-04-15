@@ -12,6 +12,9 @@ from src.warehouse.transformation.relationship_type import (
     transform_relationship_type,
 )
 from src.warehouse.transformation.investor import transform_investor
+from src.warehouse.transformation.fact_funding_round import (
+    transform_funding_round,
+)
 from src.warehouse.load.load_warehouse import load_warehouse
 
 
@@ -22,6 +25,7 @@ def run_warehouse_pipeline() -> None:
         # Store DataFrames
         staging_dataframes: Dict[str, DataFrame] = {}
         dimension_dataframes: Dict[str, DataFrame] = {}
+        fact_dataframes: Dict[str, DataFrame] = {}
 
         # Step 1: Extract all required tables
         log_operation(
@@ -108,9 +112,7 @@ def run_warehouse_pipeline() -> None:
             dimension_dataframes["dim_investor"] = dim_investor_df  # type: ignore
             print(f"Successfully stored dim_investor DataFrame")
 
-        # Step 3: Process fact tables based on dimensions
-
-        # Step 4: Load transformed data into warehouse
+        # Step 3: Load transformed data into warehouse (independent ones)
         log_operation(
             step="load",
             process="warehouse",
@@ -120,7 +122,7 @@ def run_warehouse_pipeline() -> None:
             message="Starting loading data into warehouse",
         )
 
-        # Load dimension tables first (independent ones)
+        # Load dimension tables first
         dimension_load_order: List[str] = [
             "dim_company",
             "dim_location",
@@ -131,12 +133,36 @@ def run_warehouse_pipeline() -> None:
             "dim_investor",
         ]
 
-        # Step 4.1: Load dimension tables
+        # Step 3.1: Load dimension tables
         for dim_name in dimension_load_order:
             if dim_name in dimension_dataframes:
                 load_warehouse(
                     df=dimension_dataframes[dim_name],
                     table_name=dim_name,
+                )
+
+        # Step 4: Process fact tables based on dimensions
+        # Transform funding round fact
+        if "funding_rounds" in staging_dataframes:
+            fact_funding_round_df = transform_funding_round(
+                staging_dataframes["funding_rounds"], spark
+            )
+            fact_dataframes["fact_funding_round"] = fact_funding_round_df  # type: ignore
+            print("Successfully stored fact_funding_round DataFrame")
+
+        # Transform IPO fact
+
+        # Transform acquisition fact
+
+        # Step 4.1: Load fact tables
+        fact_load_order: List[str] = [
+            "fact_funding_round",
+        ]
+
+        for fact_name in fact_load_order:
+            if fact_name in fact_dataframes:
+                load_warehouse(
+                    df=fact_dataframes[fact_name], table_name=fact_name
                 )
 
         log_operation(
