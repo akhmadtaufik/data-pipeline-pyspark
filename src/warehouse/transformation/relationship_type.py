@@ -20,11 +20,10 @@ def transform_relationship_type(df: DataFrame) -> DataFrame | None:
     try:
         # Extract distinct titles from the relationships table, filtering out null titles
         transform_df = (
-            df.select(col("title"))  # type: ignore
+            df.select(col("title"), col("created_at"))  # type: ignore
             .distinct()
             .filter(col("title").isNotNull())
             .withColumn("description", lit(None).cast("string"))
-            .withColumn("created_at")
             .withColumn("updated_at", current_timestamp())
         )
 

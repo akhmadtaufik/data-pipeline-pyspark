@@ -8,11 +8,12 @@ def transform_round_type(df: DataFrame) -> DataFrame | None:
         # Extract distinct round types from the funding_rounds table
         transform_df = (
             df.select(  # type: ignore
-                col("funding_round_type"), col("funding_round_code")
+                col("funding_round_type"),
+                col("funding_round_code"),
+                col("created_at"),
             )
             .distinct()
             .withColumn("description", lit(None).cast("string"))
-            .withColumn("created_at")
             .withColumn("updated_at", current_timestamp())
         )
 

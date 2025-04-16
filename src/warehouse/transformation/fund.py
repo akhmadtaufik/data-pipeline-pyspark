@@ -31,6 +31,9 @@ def transform_fund(df: DataFrame) -> DataFrame | None:
             current_timestamp().alias("updated_at"),
         )
 
+        # Drop duplicate rows based on object_id_nk
+        dedup_df = transform_df.dropDuplicates(["object_id_nk"])
+
         log_operation(
             step="transform",
             process="warehouse",
@@ -40,7 +43,7 @@ def transform_fund(df: DataFrame) -> DataFrame | None:
             message="Successfully transformed funds data for dim_fund",
         )
 
-        return transform_df
+        return dedup_df
 
     except Exception as e:
         log_operation(

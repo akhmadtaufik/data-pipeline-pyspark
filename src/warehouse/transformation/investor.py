@@ -30,14 +30,16 @@ def transform_investor(df: DataFrame) -> DataFrame | None:
     try:
         # Extract distinct investor object IDs
         transform_df = (
-            df.select(col("investor_object_id").alias("object_id_nk"))  # type: ignore
+            df.select(col("investor_object_id").alias("object_id_nk"), col("created_at"))  # type: ignore
             .distinct()
             .withColumn("valid_from", current_timestamp())
             .withColumn("valid_to", lit(None).cast("timestamp"))
             .withColumn("is_current", lit(True))
-            .withColumn("created_at")
             .withColumn("updated_at", current_timestamp())
         )
+
+        # Drop duplicate rows based on object_id_nk
+        dedup_df = transform_df.dropDuplicates(["object_id_nk"])
 
         log_operation(
             step="transform",
@@ -48,7 +50,7 @@ def transform_investor(df: DataFrame) -> DataFrame | None:
             message="Successfully transformed investments data for dim_investor",
         )
 
-        return transform_df
+        return dedup_df
 
     except Exception as e:
         log_operation(

@@ -78,6 +78,9 @@ def transform_funding_round(
             """
         )
 
+        # Drop duplicate rows based on funding_round_id_nk
+        transform_df = transform_df.dropDuplicates(["funding_round_id_nk"])
+
         log_operation(
             step="transform",
             process="warehouse",
