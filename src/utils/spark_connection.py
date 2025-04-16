@@ -38,9 +38,16 @@ def read_jdbc(db: str, schema: str, table_name: str) -> DataFrame:
     return df
 
 
-def write_jdbc(df: DataFrame, db: str, schema: str, table_name: str) -> None:
+def write_jdbc(
+    df: DataFrame, db: str, schema: str, table_name: str, mode: str = "append"
+) -> None:
     """
-    Writes the given DataFrame to a PostgreSQL database table using JDBC.
+    Writes the content of a DataFrame to a PostgreSQL database using JDBC.
+
+    This function saves the given DataFrame to a specified table within a PostgreSQL
+    database. The connection details such as host, port, user, and password are
+    retrieved from environment variables. The write mode can be specified to control
+    how existing data is handled.
 
     Parameters
     ----------
@@ -51,7 +58,10 @@ def write_jdbc(df: DataFrame, db: str, schema: str, table_name: str) -> None:
     schema : str
         The schema within the database where the table resides.
     table_name : str
-        The name of the table to write the DataFrame to.
+        The name of the table to write the data into.
+    mode : str, optional
+        The mode for writing data, by default "append". Other options include
+        "overwrite", "ignore", and "error".
 
     Returns
     -------
@@ -60,7 +70,7 @@ def write_jdbc(df: DataFrame, db: str, schema: str, table_name: str) -> None:
     df.write.jdbc(
         url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}?stringtype=unspecified",
         table=f"{schema}.{table_name}",
-        mode="append",
+        mode=mode,
         properties={
             "user": POSTGRES_USER,
             "password": POSTGRES_PASSWORD,
