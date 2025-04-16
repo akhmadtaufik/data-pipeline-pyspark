@@ -1,5 +1,7 @@
+import uuid
 from pyspark.sql import DataFrame
 from src.utils.spark_session import init_spark_session
+from src.utils.psycopg2_connection import read_db
 from src.utils.config import (
     POSTGRES_HOST,
     POSTGRES_PORT,
@@ -39,41 +41,87 @@ def read_jdbc(db: str, schema: str, table_name: str) -> DataFrame:
 
 
 def write_jdbc(
-    df: DataFrame, db: str, schema: str, table_name: str, mode: str = "append"
+    df: DataFrame,
+    db: str,
+    schema: str,
+    table_name: str,
+    mode: str = "append",
+    upsert_key: str = None,  # type: ignore
 ) -> None:
     """
-    Writes the content of a DataFrame to a PostgreSQL database using JDBC.
+    Writes a DataFrame to a PostgreSQL database table using JDBC.
 
-    This function saves the given DataFrame to a specified table within a PostgreSQL
-    database. The connection details such as host, port, user, and password are
-    retrieved from environment variables. The write mode can be specified to control
-    how existing data is handled.
+    Parameters:
+        df (DataFrame): The DataFrame to be written.
+        db (str): The name of the database.
+        schema (str): The schema within the database.
+        table_name (str): The name of the table to write to.
+        mode (str, optional): The write mode, either 'append', 'overwrite', or 'upsert'. Defaults to 'append'.
+        upsert_key (str, optional): The column name to use as the key for upsert operations. Required if mode is 'upsert'.
 
-    Parameters
-    ----------
-    df : DataFrame
-        The DataFrame to be written to the database.
-    db : str
-        The name of the database to connect to.
-    schema : str
-        The schema within the database where the table resides.
-    table_name : str
-        The name of the table to write the data into.
-    mode : str, optional
-        The mode for writing data, by default "append". Other options include
-        "overwrite", "ignore", and "error".
+    Raises:
+        Exception: If an error occurs during the upsert operation, the transaction is rolled back and the exception is raised.
 
-    Returns
-    -------
-    None
+    Notes:
+        - If mode is 'upsert', a temporary table is created for the operation, and an UPSERT is performed using the specified key.
+        - The function uses the organization's internal configuration for database connection parameters.
     """
-    df.write.jdbc(
-        url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}?stringtype=unspecified",
-        table=f"{schema}.{table_name}",
-        mode=mode,
-        properties={
-            "user": POSTGRES_USER,
-            "password": POSTGRES_PASSWORD,
-            "driver": "org.postgresql.Driver",
-        },  # type: ignore
-    )
+    if mode == "upsert" and upsert_key:
+        temp_table = f"temp_{table_name}_{uuid.uuid4().hex[:8]}"
+
+        # Step 1: Write to temporary table
+        df.write.jdbc(
+            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}",
+            table=f"{schema}.{temp_table}",
+            mode="overwrite",
+            properties={
+                "user": POSTGRES_USER,
+                "password": POSTGRES_PASSWORD,
+                "driver": "org.postgresql.Driver",
+            },  # type: ignore
+        )
+
+        # Step 2: Execute UPSERT
+        try:
+            conn = read_db(db_name=db)
+
+            cursor = conn.cursor()
+
+            # Generate UPDATE clause
+            update_columns = [col for col in df.columns if col != upsert_key]
+            set_clause = ", ".join(
+                [f"{col} = EXCLUDED.{col}" for col in update_columns]
+            )
+
+            query = f"""
+                INSERT INTO {schema}.{table_name}
+                SELECT * FROM {schema}.{temp_table}
+                ON CONFLICT ({upsert_key})
+                DO UPDATE SET {set_clause}
+            """
+            cursor.execute(query)
+            conn.commit()
+
+            # Cleanup
+            cursor.execute(f"DROP TABLE {schema}.{temp_table}")
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            raise
+
+        finally:
+            cursor.close()
+            conn.close()
+
+    else:
+        df.write.jdbc(
+            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}?stringtype=unspecified",
+            table=f"{schema}.{table_name}",
+            mode=mode,
+            properties={
+                "user": POSTGRES_USER,
+                "password": POSTGRES_PASSWORD,
+                "driver": "org.postgresql.Driver",
+            },  # type: ignore
+        )
