@@ -18,7 +18,8 @@ CREATE TABLE staging.acquisition (
 	source_url text NULL,
 	source_description text NULL,
 	created_at timestamp NULL,
-	updated_at timestamp NULL
+	updated_at timestamp NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -42,7 +43,8 @@ CREATE TABLE staging.company (
 	latitude numeric(9, 6) NULL,
 	longitude numeric(9, 6) NULL,
 	created_at timestamp NULL,
-	updated_at timestamp NULL
+	updated_at timestamp NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -74,7 +76,8 @@ CREATE TABLE staging.funding_rounds (
 	source_description text NULL,
 	created_by text NULL,
 	created_at timestamp NULL,
-	updated_at timestamp NULL
+	updated_at timestamp NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -94,7 +97,8 @@ CREATE TABLE staging.funds (
 	source_url text NULL,
 	source_description text NULL,
 	created_at timestamp NULL,
-	updated_at timestamp NULL
+	updated_at timestamp NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -110,7 +114,8 @@ CREATE TABLE staging.investments (
 	funded_object_id text NULL,
 	investor_object_id text NULL,
 	created_at timestamp NULL,
-	updated_at timestamp NULL
+	updated_at timestamp NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -132,7 +137,8 @@ CREATE TABLE staging.ipos (
 	source_url text NULL,
 	source_description text NULL,
 	created_at timestamp NULL,
-	updated_at timestamp NULL
+	updated_at timestamp NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -151,7 +157,8 @@ CREATE TABLE staging.milestones (
 	object_id text NULL,
 	source_description text NULL,
 	source_url text NULL,
-	updated_at text NULL
+	updated_at text NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -168,7 +175,8 @@ CREATE TABLE staging.people (
 	last_name text NULL,
 	birthplace text NULL,
 	affiliation_name text NULL,
-	created_at timestamp DEFAULT CURRENT_TIMESTAMP NULL
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
 
@@ -188,5 +196,6 @@ CREATE TABLE staging.relationships (
 	"sequence" int4 NULL,
 	title text NULL,
 	created_at timestamp NULL,
-	updated_at timestamp NULL
+	updated_at timestamp NULL,
+    etl_date timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
