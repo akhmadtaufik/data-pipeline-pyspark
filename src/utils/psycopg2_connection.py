@@ -11,11 +11,11 @@ def read_db(db_name: str):
     """
     Establishes a connection to a PostgreSQL database using the provided database name.
 
-    Args:
+    Parameters:
         db_name (str): The name of the database to connect to.
 
     Returns:
-        connection: A psycopg2 connection object to the specified PostgreSQL database.
+        connection: A connection object to the specified PostgreSQL database.
     """
     conn = psycopg2.connect(
         host=POSTGRES_HOST,
