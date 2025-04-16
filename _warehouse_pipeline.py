@@ -15,6 +15,8 @@ from src.warehouse.transformation.investor import transform_investor
 from src.warehouse.transformation.fact_funding_round import (
     transform_funding_round,
 )
+from src.warehouse.transformation.fact_ipo import transform_ipo
+from src.warehouse.transformation.fact_acquisition import transform_acquisition
 from src.warehouse.load.load_warehouse import load_warehouse
 
 
@@ -151,12 +153,24 @@ def run_warehouse_pipeline() -> None:
             print("Successfully stored fact_funding_round DataFrame")
 
         # Transform IPO fact
+        if "ipos" in staging_dataframes:
+            fact_ipo_df = transform_ipo(staging_dataframes["ipos"], spark)
+            fact_dataframes["fact_ipo"] = fact_ipo_df  # type: ignore
+            print("Successfully stored fact_ipo DataFrame")
 
         # Transform acquisition fact
+        if "acquisition" in staging_dataframes:
+            fact_acquisition_df = transform_acquisition(
+                staging_dataframes["acquisition"], spark
+            )
+            fact_dataframes["fact_acquisition"] = fact_acquisition_df  # type: ignore
+            print("Successfully stored fact_ipo DataFrame")
 
         # Step 4.1: Load fact tables
         fact_load_order: List[str] = [
             "fact_funding_round",
+            "fact_ipo",
+            "fact_acquisition",
         ]
 
         for fact_name in fact_load_order:
