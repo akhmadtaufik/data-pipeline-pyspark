@@ -1,5 +1,6 @@
 from typing import List
 from pyspark.sql import DataFrame
+from pyspark.sql.functions import current_timestamp
 from src.utils.spark_session import init_spark_session
 from src.utils.log_message import log_operation
 from src.utils.config import (
@@ -97,6 +98,9 @@ def extract_database(db_name: str, table_name: str) -> DataFrame:
                 "driver": "org.postgresql.Driver",
             },  # type: ignore
         )
+
+        # Add etl_date column
+        df = df.withColumn("etl_date", current_timestamp())
 
         log_operation(
             step="extract",

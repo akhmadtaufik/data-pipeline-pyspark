@@ -3,6 +3,7 @@ from typing import Any, Dict
 from tenacity import retry, stop_after_attempt
 from pyspark import Row  # type: ignore
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import current_timestamp
 from src.utils.api_conn import APIConnector
 from src.utils.spark_session import init_spark_session
 from src.utils.log_message import log_operation
@@ -70,6 +71,9 @@ def extract_api(start_date: str, end_date: str) -> DataFrame:
 
         # Let Spark infer the schema based on the data
         df: DataFrame = spark.createDataFrame(cleaned_data)  # type: ignore
+
+        # Add etl_date column
+        df = df.withColumn("etl_date", current_timestamp())
 
         # Log the schema that was inferred
         log_operation(

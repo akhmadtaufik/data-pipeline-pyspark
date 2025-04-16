@@ -1,28 +1,36 @@
 from pyspark.sql import DataFrame
+from pyspark.sql.functions import current_timestamp
 from src.utils.spark_session import init_spark_session
 from src.utils.log_message import log_operation
 
 
-def extract_csv(file_path: str):
+def extract_csv(file_path: str) -> DataFrame | None:
     """
     Extracts data from a CSV file into a DataFrame and logs the operation.
 
     This function initializes a SparkSession, reads a CSV file into a DataFrame,
-    and logs the success or failure of the extraction process. The log includes
-    details such as the step, status, source, and table name.
+    and adds timestamp columns for 'created_at' and 'etl_date'. It logs the
+    operation's success or failure using the log_operation function.
 
-    Args:
+    Parameters:
         file_path (str): The path to the CSV file to be extracted.
 
     Returns:
-        DataFrame | None: The DataFrame containing the extracted data if successful,
-        otherwise None if an error occurs during extraction.
+        DataFrame | None: A DataFrame containing the extracted data, or None if
+        an error occurs during extraction.
     """
     spark = init_spark_session()
-    table_name = file_path.split("/")[-1].split(".")[0]
+    table_name: str = file_path.split("/")[-1].split(".")[0]
 
     try:
         df = spark.read.csv(file_path, header=True, inferSchema=True)
+
+        # Add created_at column in people data
+        if table_name == "people":
+            df = df.withColumn("created_at", current_timestamp())
+
+        # Add etl_date column
+        df = df.withColumn("etl_date", current_timestamp())
 
         log_operation(
             step="extract",
