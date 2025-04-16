@@ -2,7 +2,7 @@ import time
 from typing import Dict, Optional
 from pyspark.sql import DataFrame, SparkSession
 from src.utils.log_message import log_operation
-from src.utils.config import DB_STAGING, DB_SOURCE
+from src.utils.config import DB_SOURCE
 from src.utils.spark_session import init_spark_session
 from src.staging.extract.extract_csv import extract_csv
 from src.staging.extract.extract_api import extract_api
