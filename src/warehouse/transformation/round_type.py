@@ -12,7 +12,7 @@ def transform_round_type(df: DataFrame) -> DataFrame | None:
             )
             .distinct()
             .withColumn("description", lit(None).cast("string"))
-            .withColumn("created_at", current_timestamp())
+            .withColumn("created_at")
             .withColumn("updated_at", current_timestamp())
         )
 

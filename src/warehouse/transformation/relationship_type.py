@@ -24,7 +24,7 @@ def transform_relationship_type(df: DataFrame) -> DataFrame | None:
             .distinct()
             .filter(col("title").isNotNull())
             .withColumn("description", lit(None).cast("string"))
-            .withColumn("created_at", current_timestamp())
+            .withColumn("created_at")
             .withColumn("updated_at", current_timestamp())
         )
 

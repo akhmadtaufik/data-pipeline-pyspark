@@ -3,31 +3,30 @@ from datetime import datetime
 from pyspark.sql import DataFrame, functions as F
 from src.warehouse.load.handle_error import handle_warehouse_error
 from src.utils.log_message import log_operation
-from src.utils.spark_connection import write_jdbc
+from src.utils.spark_connection import write_jdbc, read_jdbc
 from src.utils.psycopg2_connection import read_db
 from src.utils.config import DB_WAREHOUSE
 
 
 def check_table_max_created_at(table_name: str) -> datetime | None:
     """
-    Retrieves the maximum 'created_at' timestamp from a specified table in the warehouse database.
+    Retrieves the maximum 'created_at' timestamp from a specified table in the warehouse.
 
-    This function connects to the warehouse database and executes a query to find the maximum
-    'created_at' timestamp from the specified table. If an error occurs during the database
-    operation, it logs the error and returns None.
-
-    Parameters:
-    - table_name (str): The name of the table to query.
+    Args:
+        table_name (str): The name of the table to query.
 
     Returns:
-    - datetime | None: The maximum 'created_at' timestamp if successful, otherwise None.
+        datetime | None: The maximum 'created_at' timestamp if found, otherwise None.
+
+    Logs:
+        Logs an error message if a database error occurs during the operation.
     """
     try:
         conn = read_db(db_name=str(DB_WAREHOUSE))
 
         with conn.cursor() as cursor:
             cursor.execute(
-                f"SELECT MAX(created_at) FROM warehouse.{table_name}"
+                f"SELECT MAX(created_at) FROM warehouse.{table_name} WHERE created_at IS NOT NULL"
             )
             max_date = cursor.fetchone()[0]  # type: ignore
 
@@ -131,24 +130,6 @@ def full_load(df: DataFrame, table_name: str) -> None:
 def incremental_load(
     df: DataFrame, table_name: str, max_date: datetime
 ) -> None:
-    """
-    Performs an incremental load of new data into a specified warehouse table.
-
-    This function filters the input DataFrame to include only records with a
-    'created_at' timestamp greater than the provided 'max_date'. If no new
-    records are found, it logs the operation as skipped. Otherwise, it appends
-    the new records to the specified table in the warehouse database and logs
-    the operation as successful. In case of an error, it logs the operation as
-    failed and raises the exception.
-
-    Parameters:
-    - df (DataFrame): The DataFrame containing the data to be loaded.
-    - table_name (str): The name of the warehouse table to load data into.
-    - max_date (datetime): The maximum date to filter records by.
-
-    Returns:
-    - None
-    """
     try:
         filtered_df = df.filter(F.col("created_at") > max_date)  # type: ignore
 

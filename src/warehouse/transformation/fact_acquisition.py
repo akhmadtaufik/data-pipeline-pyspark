@@ -29,7 +29,7 @@ def transform_acquisition(
                 a.price_currency_code,
                 a.source_url,
                 a.source_description,
-                current_timestamp() AS created_at,
+                a.created_at,
                 current_timestamp() AS updated_at
             FROM acquisitions a
             LEFT JOIN dim_company acq ON a.acquiring_object_id = acq.object_id_nk

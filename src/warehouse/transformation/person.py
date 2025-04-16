@@ -36,7 +36,7 @@ def transform_person(df: DataFrame) -> DataFrame | None:
             current_timestamp().alias("valid_from"),
             lit(None).cast("timestamp").alias("valid_to"),
             lit(True).alias("is_current"),
-            current_timestamp().alias("created_at"),
+            col("created_at"),
             current_timestamp().alias("updated_at"),
         )
 

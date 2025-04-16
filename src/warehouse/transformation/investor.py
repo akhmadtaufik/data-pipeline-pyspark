@@ -35,7 +35,7 @@ def transform_investor(df: DataFrame) -> DataFrame | None:
             .withColumn("valid_from", current_timestamp())
             .withColumn("valid_to", lit(None).cast("timestamp"))
             .withColumn("is_current", lit(True))
-            .withColumn("created_at", current_timestamp())
+            .withColumn("created_at")
             .withColumn("updated_at", current_timestamp())
         )
 

@@ -28,7 +28,7 @@ def transform_ipo(df: DataFrame, spark: SparkSession) -> DataFrame | None:
                 i.stock_symbol,
                 i.source_url,
                 i.source_description,
-                current_timestamp() AS created_at,
+                i.created_at,
                 current_timestamp() AS updated_at
             FROM ipos i
             LEFT JOIN dim_company dc ON i.object_id = dc.object_id_nk
