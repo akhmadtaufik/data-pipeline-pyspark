@@ -8,6 +8,8 @@ from pyspark.sql import DataFrame
 from src.staging.load.handle_error import handle_error
 from src.utils.log_message import log_operation
 from src.utils.spark_session import init_spark_session
+from src.utils.psycopg2_connection import read_db
+from src.utils.spark_connection import write_jdbc
 from src.utils.config import (
     POSTGRES_HOST,
     POSTGRES_PORT,
@@ -42,13 +44,7 @@ def check_table_status(schema: str, table_name: str) -> tuple[Any, Any, Any]:
       - A boolean indicating if the 'etl_date' column exists.
       - The maximum 'etl_date' value if the column exists, otherwise None.
     """
-    conn = psycopg2.connect(
-        host=POSTGRES_HOST,
-        port=POSTGRES_PORT,
-        dbname=DB_STAGING,
-        user=POSTGRES_USER,
-        password=POSTGRES_PASSWORD,
-    )
+    conn = read_db(db_name=str(DB_STAGING))
 
     table_exists = False
     etl_date_exists = False
@@ -128,38 +124,36 @@ def check_table_status(schema: str, table_name: str) -> tuple[Any, Any, Any]:
 
 def full_load_with_spark(df: DataFrame, schema: str, table_name: str) -> None:
     """
-    Performs a full load of the given DataFrame into a PostgreSQL database table.
+    Performs a full load of data into a specified database table using Spark.
 
-    This function writes the DataFrame to a specified schema and table in a PostgreSQL
-    database using JDBC. It overwrites any existing data in the table. After the load
-    operation, it logs the success or failure of the operation using the `log_operation`
-    function.
+    This function writes the entire content of a DataFrame to a specified table
+    in the staging database, overwriting any existing data. It logs the operation
+    status as either successful or failed, including the number of records loaded
+    or the error message if an exception occurs.
 
     Parameters
     ----------
     df : DataFrame
-        The DataFrame to be loaded into the database.
+        The DataFrame containing the data to be loaded.
     schema : str
-        The schema in the PostgreSQL database where the table resides.
+        The schema within the database where the table resides.
     table_name : str
-        The name of the table in the PostgreSQL database.
+        The name of the table to load the data into.
 
     Raises
     ------
     Exception
-        If the load operation fails, the exception is logged and re-raised.
+        If an error occurs during the data load process.
     """
     try:
-        df.write.jdbc(
-            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{DB_STAGING}",
-            table=f"{schema}.{table_name}",
+        write_jdbc(
+            df=df,
+            db=str(DB_STAGING),
+            schema=schema,
+            table_name=table_name,
             mode="overwrite",
-            properties={
-                "user": POSTGRES_USER,
-                "password": POSTGRES_PASSWORD,
-                "driver": "org.postgresql.Driver",
-            },  # type: ignore
         )
+
         log_operation(
             step="full_load",
             process="staging",
