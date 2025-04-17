@@ -1,4 +1,4 @@
-from numpy import full
+import gc
 import psycopg2
 from datetime import datetime
 from typing import List
@@ -133,6 +133,27 @@ def full_load(df: DataFrame, table_name: str) -> None:
 def incremental_load(
     df: DataFrame, table_name: str, max_date: datetime
 ) -> None:
+    """
+    Performs an incremental load of new data into the warehouse.
+
+    This function filters the input DataFrame to include only records with a
+    'created_at' timestamp greater than the specified 'max_date'. If no new
+    records are found, it logs the operation as skipped. Otherwise, it writes
+    the filtered data to the specified table in the warehouse and logs the
+    operation as successful. In case of an error, it logs the failure and
+    raises the exception.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data to be loaded.
+    - table_name (str): The name of the target table in the warehouse.
+    - max_date (datetime): The maximum date to filter new records.
+
+    Returns:
+    - None
+
+    Raises:
+    - Exception: If an error occurs during the load process.
+    """
     try:
         filtered_df = df.filter(F.col("created_at") > max_date)  # type: ignore
 
@@ -181,6 +202,24 @@ def load_warehouse(
     mode: str = "auto",
     composite_key_cols: List[str] = None,  # type: ignore
 ) -> None:
+    """
+    Loads data into a warehouse table using various modes.
+
+    This function processes a DataFrame and loads it into a specified warehouse table
+    using one of several modes: 'full', 'upsert', 'dedup', 'incremental', or 'auto'.
+    It validates the DataFrame, determines the appropriate primary key for upsert operations,
+    and handles deduplication and incremental loading based on timestamps. The function logs
+    each step of the process and handles errors by logging and backing up data if necessary.
+
+    Parameters:
+    - df (DataFrame): The DataFrame containing the data to be loaded.
+    - table_name (str): The name of the table to load data into.
+    - mode (str, optional): The loading mode ('full', 'upsert', 'dedup', 'incremental', 'auto'). Defaults to 'auto'.
+    - composite_key_cols (List[str], optional): Columns used for deduplication when no single upsert key is available.
+
+    Raises:
+    - Exception: If an error occurs during the loading process, it is logged and re-raised.
+    """
     try:
         # Validate DataFrame before processing
         if df is None or df.count() == 0:
@@ -379,6 +418,10 @@ def load_warehouse(
         else:
             # Default to full load if no valid mode is specified or table doesn't exist
             full_load(df, table_name)
+
+        df.unpersist()
+        spark.catalog.clearCache()
+        gc.collect()
 
     except Exception as e:
         log_operation(
