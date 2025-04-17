@@ -1,3 +1,4 @@
+import gc
 from typing import Dict, List
 from pyspark.sql import DataFrame
 from src.utils.log_message import log_operation
@@ -143,6 +144,10 @@ def run_warehouse_pipeline() -> None:
                     table_name=dim_name,
                 )
 
+                dimension_dataframes[dim_name].unpersist()
+                spark.catalog.clearCache()
+                gc.collect()
+
         # Step 4: Process fact tables based on dimensions
         # Transform funding round fact
         if "funding_rounds" in staging_dataframes:
@@ -178,6 +183,10 @@ def run_warehouse_pipeline() -> None:
                 load_warehouse(
                     df=fact_dataframes[fact_name], table_name=fact_name
                 )
+
+                fact_dataframes[fact_name].unpersist()
+                spark.catalog.clearCache()
+                gc.collect()
 
         log_operation(
             step="pipeline",
