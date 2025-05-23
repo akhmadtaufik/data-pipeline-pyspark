@@ -180,9 +180,17 @@ def run_warehouse_pipeline() -> None:
 
         for fact_name in fact_load_order:
             if fact_name in fact_dataframes:
-                load_warehouse(
-                    df=fact_dataframes[fact_name], table_name=fact_name
-                )
+                if fact_name == "fact_funding_round":
+                    # Gunakan mode 'upsert' untuk menghindari full load
+                    load_warehouse(
+                        df=fact_dataframes[fact_name],
+                        table_name=fact_name,
+                        mode="upsert"
+                    )
+                else:
+                    load_warehouse(
+                        df=fact_dataframes[fact_name], table_name=fact_name
+                    )
 
                 fact_dataframes[fact_name].unpersist()
                 spark.catalog.clearCache()

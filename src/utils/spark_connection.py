@@ -71,13 +71,14 @@ def write_jdbc(
 
         # Step 1: Write to temporary table
         df.write.jdbc(
-            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}",
+            url=f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{db}?reWriteBatchedInserts=true",
             table=f"{schema}.{temp_table}",
             mode="overwrite",
             properties={
                 "user": POSTGRES_USER,
                 "password": POSTGRES_PASSWORD,
                 "driver": "org.postgresql.Driver",
+                "batchsize": "5000"
             },  # type: ignore
         )
 
